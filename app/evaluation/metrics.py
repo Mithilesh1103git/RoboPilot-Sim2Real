@@ -12,6 +12,7 @@ def summarize_trials(rows: list[dict]) -> dict:
         "success_rate": successes / len(completed),
         "recovery_rate": (
             sum(r["recovered"] for r in recovery_rows) / len(recovery_rows)
-            if recovery_rows else None
+            if recovery_rows
+            else None
         ),
     }

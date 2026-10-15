@@ -1,4 +1,5 @@
 """Telemetry endpoints; replace demo payloads with live simulation state."""
+
 from fastapi import APIRouter
 
 router = APIRouter(tags=["telemetry"])

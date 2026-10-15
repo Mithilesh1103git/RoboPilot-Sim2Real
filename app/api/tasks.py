@@ -1,4 +1,5 @@
 """Task lifecycle API. Simulation execution is intentionally a stub initially."""
+
 from uuid import uuid4
 from fastapi import APIRouter
 from app.schemas import TaskRequest, TaskStatus
@@ -25,6 +26,7 @@ def get_task(task_id: str):
     task = _tasks.get(task_id)
     if task is None:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Task not found")
     return TaskStatus(**task)
 
@@ -32,6 +34,7 @@ def get_task(task_id: str):
 @router.post("/tasks/{task_id}/stop", response_model=TaskStatus)
 def stop_task(task_id: str):
     from fastapi import HTTPException
+
     task = _tasks.get(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")

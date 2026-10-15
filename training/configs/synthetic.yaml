@@ -1,0 +1,1 @@
+env_id: Pendulum-v1 # Replace with registered RoboPilot task\nepisodes: 100\nseed: 7\npolicy: random\noutput: training/datasets/transitions.npz\n

@@ -1,4 +1,5 @@
 """Starter CLI for repeatable evaluation; connect to TaskExecutor."""
+
 import argparse
 import json
 from pathlib import Path
@@ -25,7 +26,9 @@ def main():
                 "status": "not_implemented",
             }
             f.write(json.dumps(row) + "\n")
-    print(f"Wrote placeholder trial records to {output}. Connect TaskExecutor to run real trials.")
+    print(
+        f"Wrote placeholder trial records to {output}. Connect TaskExecutor to run real trials."
+    )
 
 
 if __name__ == "__main__":

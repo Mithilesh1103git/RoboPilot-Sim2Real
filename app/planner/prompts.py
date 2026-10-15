@@ -1,6 +1,6 @@
 """Prompt templates for constrained high-level task planning."""
-import json
 
+import json
 
 SYSTEM_PROMPT = """You are a high-level planner for a simulated robot arm.
 Return only a JSON object matching this schema:

@@ -1,4 +1,5 @@
 """MuJoCo lifecycle wrapper (starter implementation)."""
+
 from pathlib import Path
 
 
@@ -14,6 +15,7 @@ class SimulationEnvironment:
         if self.model_path is None:
             raise ValueError("Set model_path to a MuJoCo MJCF/XML scene.")
         import mujoco
+
         self.model = mujoco.MjModel.from_xml_path(str(self.model_path))
         self.data = mujoco.MjData(self.model)
         return self
@@ -22,6 +24,7 @@ class SimulationEnvironment:
         if self.model is None or self.data is None:
             raise RuntimeError("Call load() before reset().")
         import mujoco
+
         mujoco.mj_resetData(self.model, self.data)
         mujoco.mj_forward(self.model, self.data)
 
@@ -29,6 +32,7 @@ class SimulationEnvironment:
         if self.model is None or self.data is None:
             raise RuntimeError("Call load() before step().")
         import mujoco
+
         for _ in range(max(1, n)):
             mujoco.mj_step(self.model, self.data)
 

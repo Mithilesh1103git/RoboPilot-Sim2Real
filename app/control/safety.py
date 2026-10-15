@@ -1,7 +1,12 @@
 """Safety validation for high-level plans and low-level motion targets."""
+
 ALLOWED_ACTIONS = {
-    "approach_object", "grasp_object", "lift_object",
-    "move_to_destination", "release_object", "verify",
+    "approach_object",
+    "grasp_object",
+    "lift_object",
+    "move_to_destination",
+    "release_object",
+    "verify",
 }
 
 

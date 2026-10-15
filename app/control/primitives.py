@@ -2,7 +2,11 @@
 
 
 def approach_object(target_xyz: tuple[float, float, float]) -> dict:
-    return {"action": "approach_object", "target_xyz": list(target_xyz), "implemented": False}
+    return {
+        "action": "approach_object",
+        "target_xyz": list(target_xyz),
+        "implemented": False,
+    }
 
 
 def grasp_object(object_name: str) -> dict:
@@ -14,7 +18,11 @@ def lift_object(height: float = 0.10) -> dict:
 
 
 def move_to_destination(destination_xyz: tuple[float, float, float]) -> dict:
-    return {"action": "move_to_destination", "destination_xyz": list(destination_xyz), "implemented": False}
+    return {
+        "action": "move_to_destination",
+        "destination_xyz": list(destination_xyz),
+        "implemented": False,
+    }
 
 
 def release_object() -> dict:

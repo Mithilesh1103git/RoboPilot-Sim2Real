@@ -1,4 +1,5 @@
 """Nebius Token Factory OpenAI-compatible client scaffold."""
+
 from openai import OpenAI
 from app.config import settings
 from app.planner.prompts import build_planner_messages
@@ -10,7 +11,9 @@ class NemotronPlanner:
         if not settings.nebius_api_key:
             raise RuntimeError("Set NEBIUS_API_KEY in your environment.")
         if not settings.nebius_model:
-            raise RuntimeError("Set NEBIUS_MODEL to a model ID available to your account.")
+            raise RuntimeError(
+                "Set NEBIUS_MODEL to a model ID available to your account."
+            )
         self.client = OpenAI(
             api_key=settings.nebius_api_key,
             base_url=settings.nebius_base_url,

@@ -1,4 +1,5 @@
 """Scenario configuration and deterministic reset helpers."""
+
 import random
 
 
@@ -6,6 +7,7 @@ def seed_everything(seed: int) -> None:
     random.seed(seed)
     try:
         import numpy as np
+
         np.random.seed(seed)
     except ImportError:
         pass

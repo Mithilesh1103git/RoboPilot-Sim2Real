@@ -1,4 +1,5 @@
 """Task state machine scaffold."""
+
 from enum import StrEnum
 
 
@@ -23,4 +24,6 @@ class TaskExecutor:
 
     def run(self, instruction: str):
         """TODO: connect observations, planning, primitives, verification and recovery."""
-        raise NotImplementedError("Implement the task loop after baseline manipulation works.")
+        raise NotImplementedError(
+            "Implement the task loop after baseline manipulation works."
+        )

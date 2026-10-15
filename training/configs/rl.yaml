@@ -1,0 +1,1 @@
+env_id: Pendulum-v1 # Replace with registered RoboPilot task\nalgorithm: PPO\ntimesteps: 100000\nseed: 7\ndevice: auto\noutput: training/rl/checkpoints/robopilot_policy\n

@@ -1,4 +1,5 @@
 """Validated API and planner schemas."""
+
 from typing import Literal
 from pydantic import BaseModel, Field
 
@@ -9,7 +10,14 @@ class TaskRequest(BaseModel):
 
 
 class PlanStep(BaseModel):
-    action: Literal["approach_object", "grasp_object", "lift_object", "move_to_destination", "release_object", "verify"]
+    action: Literal[
+        "approach_object",
+        "grasp_object",
+        "lift_object",
+        "move_to_destination",
+        "release_object",
+        "verify",
+    ]
     target_object: str | None = None
     destination: str | None = None
     rationale: str = ""
