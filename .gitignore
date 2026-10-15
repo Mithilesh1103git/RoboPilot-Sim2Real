@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+runs/*
+!runs/.gitkeep
+assets/*
+!assets/README.md
+.DS_Store

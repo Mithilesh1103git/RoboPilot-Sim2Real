@@ -1,0 +1,25 @@
+app:
+  name: RoboPilot
+  log_level: INFO
+
+simulation:
+  engine: mujoco
+  headless: true
+  model_path: assets/scene.xml
+  timestep: 0.002
+  seed: 7
+
+planner:
+  provider: nebius_token_factory
+  model: ""  # Set NEBIUS_MODEL to a model ID available to your account.
+  temperature: 0.1
+  max_retries: 2
+
+safety:
+  max_joint_velocity: 1.0
+  max_recovery_retries: 2
+  require_plan_validation: true
+
+evaluation:
+  default_trials: 30
+  output_dir: runs

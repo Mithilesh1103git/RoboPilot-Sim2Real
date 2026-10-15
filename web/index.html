@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoboPilot</title>
+  <link rel="stylesheet" href="/web/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark">R</div>
+    <div class="brand-copy"><strong>RoboPilot</strong><span>Language-guided manipulation</span></div>
+    <span class="status-pill"><i></i> Starter scaffold</span>
+  </header>
+  <main class="layout">
+    <section class="panel task-panel">
+      <div class="panel-heading"><h1>Robot task</h1><span class="eyebrow">01 / INSTRUCTION</span></div>
+      <label for="instruction">Natural-language instruction</label>
+      <textarea id="instruction" rows="3">Pick up the red block and place it inside the blue tray.</textarea>
+      <label for="scenario">Scenario</label>
+      <select id="scenario"><option value="default">Default tabletop</option></select>
+      <div class="actions">
+        <button id="runTask">Submit task</button>
+        <button id="resetSim" class="secondary">Reset</button>
+      </div>
+      <p id="taskMessage" class="muted">Backend is a scaffold; robot execution is not connected yet.</p>
+    </section>
+    <section class="panel">
+      <div class="panel-heading"><h2>Simulation</h2><span class="eyebrow">02 / ENVIRONMENT</span></div>
+      <div class="sim-placeholder">
+        <div class="grid-floor"></div>
+        <div class="sim-icon">⌘</div>
+        <strong>MuJoCo viewport</strong>
+        <span>Connect a rendered frame or stream here.</span>
+      </div>
+      <div class="stats">
+        <div><span>Connection</span><strong id="connection">Offline</strong></div>
+        <div><span>Sim time</span><strong id="simTime">—</strong></div>
+        <div><span>Current action</span><strong id="currentAction">—</strong></div>
+      </div>
+    </section>
+    <section class="panel event-panel">
+      <div class="panel-heading"><h2>Execution events</h2><span class="eyebrow">03 / TELEMETRY</span></div>
+      <ol id="events" class="events"><li class="empty-event">No events yet.</li></ol>
+    </section>
+  </main>
+  <script src="/web/app.js"></script>
+</body>
+</html>
