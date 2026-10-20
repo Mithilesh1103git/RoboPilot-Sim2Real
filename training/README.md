@@ -1,26 +1,31 @@
-# RoboPilot Training
+# RoboPilot-Sim2Real Training Pipeline
 
-Two workflows:
-- `synthetic`: generate scene parameter samples, collect transitions, inspect/label/augment/export datasets.
-- `rl`: Gymnasium integration helpers, reward-design example, PPO/SAC training, rollout collection and evaluation.
+The training subsystem is a **VM/container-deployable service** as well as a set of optional local CLI tools. The deployment lives in `training/deploy/`.
 
-This is an environment-agnostic starter. `Pendulum-v1` is used only for smoke tests; it is not a robot manipulation task. Register your RoboPilot MuJoCo environment with Gymnasium and pass its environment ID to the scripts.
+- Stage 4: synthetic transition generation, domain-randomization manifests and augmentation.
+- Stage 5: object-storage-backed unified buffer, Flow Controller, World Model training, optional RL policy training, checkpoints and artifact upload.
+- Durable datasets, checkpoints, metrics and run manifests reside in S3-compatible object storage; container disk is temporary scratch space.
+- PyTorch uses CUDA when available and configured. MuJoCo remains physics ground truth and is not automatically GPU accelerated.
 
-Install from the repository root:
+## Deploy as a container
+
+See [`deploy/README.md`](deploy/README.md). In brief:
+
 ```bash
-pip install -r training/requirements-training.txt
+cd training/deploy
+cp .env.example .env
+# Set object storage endpoint, bucket and credentials in .env
+docker compose up --build -d
 ```
 
-Smoke-test synthetic collection:
+The service exposes `/health`, `/storage/buffer`, `POST /runs`, `GET /runs/{run_id}`, and interactive API docs at `/docs`.
+
+## Local development (optional CLI)
+
 ```bash
-python -m training.synthetic.generate_episodes --env-id Pendulum-v1 --episodes 5 --output training/datasets/demo.npz
-python -m training.synthetic.collect_observations --input training/datasets/demo.npz
+python -m pip install -r training/requirements-training.txt
+python -m training.synthetic.generate_episodes --env-id Pendulum-v1 --episodes 10 --output training/datasets/transitions.npz
+python -m training.rl.world_model --dataset training/datasets/transitions.npz --epochs 20 --output training/rl/checkpoints/world_model.pt
 ```
 
-Smoke-test RL:
-```bash
-python -m training.rl.train --env-id Pendulum-v1 --timesteps 10000 --output training/rl/checkpoints/ppo
-python -m training.rl.evaluate --env-id Pendulum-v1 --model training/rl/checkpoints/ppo.zip --episodes 5
-```
-
-A RoboPilot environment must implement Gymnasium `reset()` and `step()` and define stable action/observation spaces. Add task-specific success labels, camera frames, language instructions, object poses and domain randomization when connecting the manipulation simulator. Synthetic generation is a data-production pipeline; RL is a policy-learning pipeline. Demonstrations can later seed imitation learning, and RL rollouts can expand datasets.
+`Pendulum-v1` is only a smoke-test environment. Robot-specific RL training requires a registered Gymnasium environment connected to the RoboPilot simulation/control stack.

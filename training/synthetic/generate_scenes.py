@@ -27,7 +27,7 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", encoding="utf-8") as f:
         for i in range(a.count):
-            f.write(json.dumps(sample(a.seed + i)) + "\\n")
+            f.write(json.dumps(sample(a.seed + i)) + "\n")
     print(f"Wrote {a.count} samples to {out.resolve()}")
 
 
