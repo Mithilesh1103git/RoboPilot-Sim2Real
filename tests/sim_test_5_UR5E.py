@@ -1,12 +1,13 @@
-import os
-import time
-
 import mujoco
 import mujoco.viewer
 import numpy as np
+import os
+import time
 
 # Point to your local UR5e xml file
-LOCAL_ASSETS_PATH = r"C:\Users\mithi_w\mydata\git_repos\personal_repos\RoboPilot\assets"
+LOCAL_ASSETS_PATH = (
+    r"C:\Users\mithi_w\mydata\git_repos\personal_repos\RoboPilot-Sim2Real\assets\robots"
+)
 MODEL_PATH = os.path.abspath(
     os.path.join(
         LOCAL_ASSETS_PATH, "universal_robots_ur5e", "ur5e_table_tray_glass.xml"

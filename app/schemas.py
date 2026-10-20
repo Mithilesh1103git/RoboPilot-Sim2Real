@@ -1,8 +1,7 @@
 """Pydantic schemas used by the public API."""
 
-from typing import Any, Literal
-
 from pydantic import BaseModel, ConfigDict, Field
+from typing import Any, Literal
 
 TaskState = Literal["queued", "running", "succeeded", "failed", "stopped"]
 

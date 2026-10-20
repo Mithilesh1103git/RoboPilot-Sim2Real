@@ -3,11 +3,10 @@
 import argparse
 import json
 import time
-from pathlib import Path
-
 from app.agent.executor import TaskExecutor
 from app.config import settings
 from app.simulation.environment import SimulationEnvironment
+from pathlib import Path
 
 
 def run_trial(trial_id: int, seed: int, scenario: str = "default") -> dict:

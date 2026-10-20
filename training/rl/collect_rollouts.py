@@ -1,7 +1,6 @@
 import argparse
-from pathlib import Path
-
 import numpy as np
+from pathlib import Path
 from stable_baselines3 import PPO, SAC
 
 from .env import make_env

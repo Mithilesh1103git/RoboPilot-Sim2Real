@@ -5,18 +5,16 @@ leaves `.env` loading to the caller so local secrets/config files are not read
 implicitly and planner credentials are never required for this baseline.
 """
 
-from pathlib import Path
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
-
 from app.api.datasets import router as datasets_router
 from app.api.tasks import environment
 from app.api.tasks import router as tasks_router
 from app.api.telemetry import router as telemetry_router
 from app.config import settings
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 app = FastAPI(
     title=settings.app_name,

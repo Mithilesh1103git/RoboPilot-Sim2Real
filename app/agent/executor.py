@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import threading
 import time
-from enum import StrEnum
-from typing import Any
-
 from app.agent.recovery import choose_recovery
 from app.control.primitives import pick_and_place
+from enum import StrEnum
+from typing import Any
 
 
 class AgentState(StrEnum):

@@ -8,7 +8,7 @@ runs/*
 assets/*
 !assets/README.md
 .DS_Store
-.idea/
+.idea/*
 
 # Runtime-ingested datasets (keep only the directory marker)
 data/adapter/raw/*

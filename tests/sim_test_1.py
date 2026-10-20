@@ -1,6 +1,5 @@
-import time
-
 import mujoco.viewer
+import time
 
 # 1. Define your model XML as a string
 xml_string = """

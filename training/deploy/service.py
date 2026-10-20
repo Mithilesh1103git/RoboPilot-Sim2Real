@@ -13,10 +13,9 @@ import tempfile
 import threading
 import time
 import uuid
+from fastapi import FastAPI, HTTPException
 from pathlib import Path
 from types import SimpleNamespace
-
-from fastapi import FastAPI, HTTPException
 
 from .schemas import StartRunRequest
 from .storage import ObjectStorage
