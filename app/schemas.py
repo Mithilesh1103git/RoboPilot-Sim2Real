@@ -1,12 +1,16 @@
-"""Validated API and planner schemas."""
+"""Pydantic schemas used by the public API."""
 
-from typing import Literal
-from pydantic import BaseModel, Field
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+TaskState = Literal["queued", "running", "succeeded", "failed", "stopped"]
 
 
 class TaskRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     instruction: str = Field(min_length=3, max_length=500)
-    scenario: str = "default"
+    scenario: str = Field(default="default", min_length=1, max_length=80)
 
 
 class PlanStep(BaseModel):
@@ -33,5 +37,19 @@ class TaskPlan(BaseModel):
 
 class TaskStatus(BaseModel):
     task_id: str
-    status: Literal["idle", "queued", "running", "succeeded", "failed", "stopped"]
+    status: TaskState
+    instruction: str = ""
+    scenario: str = "default"
     message: str = ""
+    created_at: str | None = None
+    started_at: str | None = None
+    finished_at: str | None = None
+    result: dict[str, Any] | None = None
+    error: str | None = None
+
+
+class HealthStatus(BaseModel):
+    status: str
+    project: str
+    simulation_connected: bool
+    robot: str

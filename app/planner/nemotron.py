@@ -1,6 +1,7 @@
 """Nebius Token Factory OpenAI-compatible client scaffold."""
 
 from openai import OpenAI
+
 from app.config import settings
 from app.planner.prompts import build_planner_messages
 from app.planner.validation import parse_plan

@@ -1,6 +1,8 @@
 """Generate randomized scene-parameter examples; wire these into your MuJoCo reset hook."""
 
-import argparse, json, random
+import argparse
+import json
+import random
 from pathlib import Path
 
 

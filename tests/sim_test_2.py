@@ -1,8 +1,8 @@
 import time
 import urllib.request
-import numpy as np
-import mujoco
+
 import mujoco.viewer
+import numpy as np
 
 # 1. Base URL path targeting Google DeepMind's MuJoCo Menagerie repo
 RAW_URL = "https://githubusercontent.com"

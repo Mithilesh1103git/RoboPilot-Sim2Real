@@ -1,7 +1,8 @@
 import argparse
 from pathlib import Path
-import numpy as np
+
 import gymnasium as gym
+import numpy as np
 
 
 def flat(x):

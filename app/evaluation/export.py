@@ -1,4 +1,4 @@
-"""CSV export for JSONL trial records."""
+"""Export JSON Lines trial records to CSV."""
 
 import csv
 import json
@@ -13,9 +13,16 @@ def export_jsonl_to_csv(source: str, destination: str) -> None:
     ]
     if not rows:
         raise ValueError("No trial records found.")
+    keys = list(dict.fromkeys(key for row in rows for key in row.keys()))
     output = Path(destination)
     output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+    with output.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=keys, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(rows)
+        for row in rows:
+            writer.writerow(
+                {
+                    key: json.dumps(value) if isinstance(value, (dict, list)) else value
+                    for key, value in row.items()
+                }
+            )

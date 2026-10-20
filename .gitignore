@@ -8,3 +8,9 @@ runs/*
 assets/*
 !assets/README.md
 .DS_Store
+
+# Runtime-ingested datasets (keep only the directory marker)
+data/adapter/raw/*
+!data/adapter/raw/.gitkeep
+data/adapter/standardized/*
+!data/adapter/standardized/.gitkeep
