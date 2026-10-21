@@ -1,7 +1,9 @@
-"""Training orchestration with explicit execution-frequency and queue controls.
+"""Deployable training orchestration with optional Stage 4 generation.
 
-Runs bounded collection/model-training/policy-training stages. GPU is selected by
-PyTorch when available; MuJoCo itself is not assumed to be GPU accelerated.
+The Flow Controller accepts local transition files downloaded from object storage,
+can invoke the synthetic generator as part of the same run, bounds the replay
+buffer, and schedules World Model / optional RL updates. CLI is an optional wrapper
+around the same pipeline function used by the container service.
 """
 
 from __future__ import annotations
@@ -10,7 +12,6 @@ import argparse
 import json
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 from .replay_buffer import ReplayBuffer
@@ -39,10 +40,9 @@ class FlowController:
     def ingest(self, dataset_path):
         before = len(self.buffer)
         self.buffer.extend_npz(dataset_path)
-        if len(self.buffer) > self.max_queue_size:
-            # ReplayBuffer already bounds capacity; this guard documents queue pressure.
-            raise RuntimeError("Replay queue capacity exceeded")
         added = len(self.buffer) - before
+        if len(self.buffer) > self.max_queue_size:
+            raise RuntimeError("Replay queue capacity exceeded")
         self.events.append(
             {
                 "event": "ingest",
@@ -83,23 +83,56 @@ class FlowController:
 
 
 def run_pipeline(args):
+    """Run Stage 4 generation (if enabled), then Stage 5 WM/RL training.
+
+    `datasets` are local paths downloaded by the deploy service from object storage.
+    Generated data is written into this run's output directory and joins the same
+    replay buffer before model training.
+    """
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    dataset_paths = list(getattr(args, "datasets", []) or [])
+    synthetic_report = None
+    if getattr(args, "generate_synthetic", False):
+        from training.synthetic.generate_episodes import generate_dataset
+
+        synthetic_path = output_dir / "synthetic" / "transitions.npz"
+        synthetic_report = generate_dataset(
+            env_id=getattr(args, "synthetic_env_id", "Pendulum-v1"),
+            episodes=int(getattr(args, "synthetic_episodes", 10)),
+            seed=int(getattr(args, "synthetic_seed", 7)),
+            policy=getattr(args, "synthetic_policy", "random"),
+            output=synthetic_path,
+        )
+        dataset_paths.append(str(synthetic_path))
+
+    if not dataset_paths:
+        raise ValueError(
+            "No transition datasets supplied; provide object-storage datasets or enable synthetic generation"
+        )
+
     controller = FlowController(
         args.replay_capacity, args.world_model_every, args.rl_every, args.max_queue_size
     )
-    for dataset in args.datasets:
+    for dataset in dataset_paths:
         controller.ingest(dataset)
     if len(controller.buffer) == 0:
-        raise ValueError("At least one transition dataset is required")
-    merged = Path(args.output_dir) / "replay_buffer.npz"
+        raise ValueError(
+            "At least one transition dataset containing transitions is required"
+        )
+
+    merged = output_dir / "replay_buffer.npz"
     controller.save_replay(merged)
     controller.next_iteration()
     report = {
         "replay_buffer": str(merged),
         "transitions": len(controller.buffer),
+        "synthetic_generation": synthetic_report,
         "world_model": None,
         "policy": None,
     }
     if controller.should_update_world_model():
+        checkpoint = output_dir / "world_model.pt"
         cmd = [
             sys.executable,
             "-m",
@@ -107,18 +140,19 @@ def run_pipeline(args):
             "--dataset",
             str(merged),
             "--output",
-            str(Path(args.output_dir) / "world_model.pt"),
+            str(checkpoint),
             "--epochs",
             str(args.world_model_epochs),
             "--device",
             args.device,
         ]
         subprocess.run(cmd, check=True)
-        report["world_model"] = str(Path(args.output_dir) / "world_model.pt")
+        report["world_model"] = str(checkpoint)
         controller.events.append(
-            {"event": "world_model_trained", "checkpoint": report["world_model"]}
+            {"event": "world_model_trained", "checkpoint": str(checkpoint)}
         )
-    if args.env_id and controller.should_update_policy():
+    if getattr(args, "env_id", "") and controller.should_update_policy():
+        policy_path = output_dir / "policy"
         cmd = [
             sys.executable,
             "-m",
@@ -130,23 +164,28 @@ def run_pipeline(args):
             "--timesteps",
             str(args.timesteps),
             "--output",
-            str(Path(args.output_dir) / "policy"),
+            str(policy_path),
             "--device",
             args.device,
         ]
         subprocess.run(cmd, check=True)
-        report["policy"] = str(Path(args.output_dir) / "policy")
+        report["policy"] = str(policy_path)
         controller.events.append(
-            {"event": "policy_trained", "checkpoint": report["policy"]}
+            {"event": "policy_trained", "checkpoint": str(policy_path)}
         )
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    controller.write_report(Path(args.output_dir) / "flow_report.json")
-    print(json.dumps(report, indent=2))
+    controller.events.append(
+        {"event": "pipeline_completed", "synthetic_generation": bool(synthetic_report)}
+    )
+    controller.write_report(output_dir / "flow_report.json")
+    (output_dir / "pipeline_summary.json").write_text(json.dumps(report, indent=2))
+    return report
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--datasets", nargs="+", required=True, help="Transition NPZ files")
+    p.add_argument(
+        "--datasets", nargs="*", default=[], help="Optional transition NPZ files"
+    )
     p.add_argument("--output-dir", default="training/experiments/flow_run")
     p.add_argument("--replay-capacity", type=int, default=100000)
     p.add_argument("--max-queue-size", type=int, default=100000)
@@ -161,8 +200,16 @@ def main():
     p.add_argument("--algorithm", choices=["PPO", "SAC"], default="PPO")
     p.add_argument("--timesteps", type=int, default=10000)
     p.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
+    p.add_argument(
+        "--generate-synthetic",
+        action="store_true",
+        help="Generate Stage 4 transitions inside this pipeline run",
+    )
+    p.add_argument("--synthetic-env-id", default="Pendulum-v1")
+    p.add_argument("--synthetic-episodes", type=int, default=10)
+    p.add_argument("--synthetic-seed", type=int, default=7)
+    p.add_argument("--synthetic-policy", choices=["random", "zero"], default="random")
     a = p.parse_args()
-    Path(a.output_dir).mkdir(parents=True, exist_ok=True)
     run_pipeline(a)
 
 

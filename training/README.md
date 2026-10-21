@@ -2,7 +2,7 @@
 
 The training subsystem is a **VM/container-deployable service** as well as a set of optional local CLI tools. The deployment lives in `training/deploy/`.
 
-- Stage 4: synthetic transition generation, domain-randomization manifests and augmentation.
+- Stage 4: synthetic transition generation, domain-randomization manifests and augmentation. The deployed Flow Controller can invoke the transition generator in-process as part of a training run.
 - Stage 5: object-storage-backed unified buffer, Flow Controller, World Model training, optional RL policy training, checkpoints and artifact upload.
 - Durable datasets, checkpoints, metrics and run manifests reside in S3-compatible object storage; container disk is temporary scratch space.
 - PyTorch uses CUDA when available and configured. MuJoCo remains physics ground truth and is not automatically GPU accelerated.
@@ -18,7 +18,7 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-The service exposes `/health`, `/storage/buffer`, `POST /runs`, `GET /runs/{run_id}`, and interactive API docs at `/docs`.
+The service exposes `/health`, `/storage/buffer`, `POST /runs`, `GET /runs/{run_id}`, and interactive API docs at `/docs`. To generate synthetic transitions inside the deployed pipeline, submit `generate_synthetic: true` in the `POST /runs` body. Optionally set `upload_synthetic_to_buffer: true` to persist the generated dataset into the configured unified-buffer prefix.
 
 ## Local development (optional CLI)
 

@@ -1,7 +1,9 @@
 import json
-import pytest
-from app.data_adapter.service import DatasetAdapter, DatasetValidationError
 from pathlib import Path
+
+import pytest
+
+from app.data_adapter.service import DatasetAdapter, DatasetValidationError
 
 
 def test_normalize_generic_records(tmp_path):

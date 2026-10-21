@@ -13,9 +13,10 @@ import tempfile
 import threading
 import time
 import uuid
-from fastapi import FastAPI, HTTPException
 from pathlib import Path
 from types import SimpleNamespace
+
+from fastapi import FastAPI, HTTPException
 
 from .schemas import StartRunRequest
 from .storage import ObjectStorage
@@ -58,9 +59,9 @@ def _execute_run(run_id: str, req: StartRunRequest):
         keys = sorted(
             k for k in obj.list_keys(req.dataset_prefix) if k.endswith(".npz")
         )
-        if not keys:
+        if not keys and not req.generate_synthetic:
             raise RuntimeError(
-                f"No .npz transition datasets found under s3://{obj.bucket}/{req.dataset_prefix}"
+                f"No .npz transition datasets found under s3://{obj.bucket}/{req.dataset_prefix}; enable generate_synthetic to generate Stage 4 data in this run"
             )
         local_datasets = []
         for i, key in enumerate(keys):
@@ -80,8 +81,27 @@ def _execute_run(run_id: str, req: StartRunRequest):
             env_id=req.env_id or "",
             algorithm=req.algorithm,
             timesteps=req.timesteps,
+            generate_synthetic=req.generate_synthetic,
+            synthetic_env_id=req.synthetic_env_id,
+            synthetic_episodes=req.synthetic_episodes,
+            synthetic_seed=req.synthetic_seed,
+            synthetic_policy=req.synthetic_policy,
         )
-        run_pipeline(args)
+        pipeline_report = run_pipeline(args)
+        synthetic_path = output_dir / "synthetic" / "transitions.npz"
+        synthetic_key = None
+        if req.generate_synthetic and synthetic_path.exists():
+            synthetic_key = (
+                f"{req.artifact_prefix.rstrip('/')}/{run_id}/synthetic/transitions.npz"
+            )
+            obj.upload(synthetic_path, synthetic_key, "application/octet-stream")
+            if req.upload_synthetic_to_buffer:
+                buffer_prefix = req.synthetic_buffer_prefix.strip("/")
+                buffer_key = f"{buffer_prefix}/{run_id}-synthetic-transitions.npz"
+                obj.upload(synthetic_path, buffer_key, "application/octet-stream")
+                log.info(
+                    "Uploaded generated transitions to unified buffer: %s", buffer_key
+                )
         # Upload all generated outputs, including model checkpoints and reports.
         uploaded = []
         for path in output_dir.rglob("*"):
@@ -102,6 +122,8 @@ def _execute_run(run_id: str, req: StartRunRequest):
             "run_id": run_id,
             "status": "succeeded",
             "input_keys": keys,
+            "synthetic_dataset_key": synthetic_key,
+            "pipeline_report": pipeline_report,
             "artifacts": uploaded,
             "completed_at": time.time(),
             "device_requested": req.device,
@@ -114,6 +136,8 @@ def _execute_run(run_id: str, req: StartRunRequest):
             status="succeeded",
             input_keys=keys,
             artifacts=uploaded,
+            synthetic_dataset_key=synthetic_key,
+            pipeline_report=pipeline_report,
             completed_at=manifest["completed_at"],
             manifest_key=f"{req.artifact_prefix.rstrip('/')}/{run_id}/run-manifest.json",
         )

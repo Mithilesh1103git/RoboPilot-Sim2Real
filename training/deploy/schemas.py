@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field
 from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class StartRunRequest(BaseModel):
@@ -15,3 +16,12 @@ class StartRunRequest(BaseModel):
     algorithm: Literal["PPO", "SAC"] = "PPO"
     timesteps: int = Field(default=10000, ge=1)
     device: Literal["auto", "cpu", "cuda"] = "auto"
+
+    # Optional Stage 4 generation, invoked by the deployed Flow Controller.
+    generate_synthetic: bool = False
+    synthetic_env_id: str = "Pendulum-v1"
+    synthetic_episodes: int = Field(default=10, ge=1, le=100000)
+    synthetic_seed: int = 7
+    synthetic_policy: Literal["random", "zero"] = "random"
+    upload_synthetic_to_buffer: bool = False
+    synthetic_buffer_prefix: str = "unified-buffer/generated"

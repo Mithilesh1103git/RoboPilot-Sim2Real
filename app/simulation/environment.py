@@ -7,7 +7,6 @@ block, and a fixed blue tray. No project files are modified at runtime.
 
 from __future__ import annotations
 
-import numpy as np
 import os
 import re
 import tempfile
@@ -15,6 +14,8 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+
+import numpy as np
 
 
 class SimulationEnvironment:

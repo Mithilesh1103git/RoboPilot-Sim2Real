@@ -1,7 +1,8 @@
-import mujoco.viewer
-import numpy as np
 import os
 import time
+
+import mujoco.viewer
+import numpy as np
 
 # Point to your local panda.xml file
 LOCAL_ASSETS_PATH = r"C:\Users\mithi_w\mydata\git_repos\personal_repos\RoboPilot\assets"

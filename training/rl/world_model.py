@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
+
 import numpy as np
 import torch
-from pathlib import Path
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 

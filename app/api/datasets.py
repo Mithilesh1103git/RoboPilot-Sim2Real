@@ -7,12 +7,14 @@ Keep HTTP concerns here; reusable normalization/storage logic lives in
 from __future__ import annotations
 
 import json
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse
+
 from app.config import PROJECT_ROOT
 from app.data_adapter.models import IngestRequest, IngestResponse
 from app.data_adapter.service import DatasetAdapter, DatasetValidationError
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse
-from pathlib import Path
 
 router = APIRouter(prefix="/datasets", tags=["data-adapter"])
 adapter = DatasetAdapter(PROJECT_ROOT / "data" / "adapter")

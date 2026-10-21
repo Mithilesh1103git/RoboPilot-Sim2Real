@@ -1,8 +1,9 @@
 """Live telemetry backed by the current MuJoCo environment and task store."""
 
+from fastapi import APIRouter
+
 from app.api.tasks import _tasks, _tasks_lock, environment
 from app.config import settings
-from fastapi import APIRouter
 
 router = APIRouter(tags=["telemetry"])
 

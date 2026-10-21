@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import numpy as np
 import time
+
+import numpy as np
+
 from app.control.motion import move_end_effector
 
 

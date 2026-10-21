@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-import numpy as np
 import time
+from dataclasses import dataclass
+
+import numpy as np
+
 from app.config import settings
 from app.control.safety import validate_joint_targets
-from dataclasses import dataclass
 
 
 @dataclass

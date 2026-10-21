@@ -5,9 +5,9 @@ This is a deployable VM/container service for Stage 5. It is not CLI-first: the 
 ## Architecture
 
 1. Transition datasets (`.npz`) are placed in the configured object-storage bucket under `unified-buffer/` (or the requested `dataset_prefix`).
-2. `POST /runs` submits a training run. The service downloads all `.npz` objects under the selected prefix into temporary local scratch space.
+2. `POST /runs` submits a training run. The service downloads `.npz` objects under the selected prefix into temporary scratch space. If `generate_synthetic=true`, the Flow Controller calls `training.synthetic.generate_episodes.generate_dataset()` inside the same container and adds the generated transitions to the same replay buffer.
 3. The Flow Controller builds a bounded replay buffer and orchestrates World Model training and optional PPO/SAC policy training according to configured frequencies.
-4. Generated checkpoints, metrics, replay buffer and reports are uploaded under `training-artifacts/<run_id>/`.
+4. Generated transitions, checkpoints, metrics, replay buffer and reports are uploaded under `training-artifacts/<run_id>/`. Set `upload_synthetic_to_buffer=true` to also write generated transitions to `synthetic_buffer_prefix` in the unified object-storage buffer.
 5. `GET /runs/{run_id}` reports status for the current service instance; `GET /health` reports service and CUDA status; `GET /storage/buffer` inspects available dataset objects.
 
 Object storage is the durable shared source of truth. Local disk is temporary scratch space only. Do not place credentials in source control.
@@ -34,11 +34,18 @@ curl -X POST http://localhost:8080/runs \
     "world_model_epochs": 20,
     "world_model_every": 1,
     "rl_every": 1,
-    "device": "auto"
+    "device": "auto",
+    "generate_synthetic": true,
+    "synthetic_env_id": "Pendulum-v1",
+    "synthetic_episodes": 10,
+    "synthetic_seed": 7,
+    "synthetic_policy": "random",
+    "upload_synthetic_to_buffer": true,
+    "synthetic_buffer_prefix": "unified-buffer/generated"
   }'
 ```
 
-If `env_id` is supplied, policy training is also invoked; it must be a Gymnasium environment registered in the container and wired to the robot simulator for robot-specific training. Without `env_id`, the pipeline trains the World Model and skips policy training. The current training implementation uses the existing sequential WM/RL stages; a learned world model is not a substitute for MuJoCo physics.
+If `env_id` is supplied, policy training is also invoked; it must be a Gymnasium environment registered in the container and wired to the robot simulator for robot-specific training. Without `env_id`, the pipeline trains the World Model and skips policy training. `generate_synthetic` invokes Stage 4 from inside the same service/Flow Controller; `Pendulum-v1` is only a smoke-test environment, not robot manipulation data. The current training implementation uses sequential WM/RL stages; a learned world model is not a substitute for MuJoCo physics.
 
 ## Object layout
 
@@ -63,7 +70,7 @@ Use `.npz` transition datasets with keys `observations`, `actions`, `rewards`, `
 
 - `GET /health`
 - `GET /storage/buffer?prefix=unified-buffer/`
-- `POST /runs` — queue a run and return HTTP 202
+- `POST /runs` — queue a run and return HTTP 202; supports in-pipeline synthetic generation options
 - `GET /runs/{run_id}` — current run state
 
 ## Production hardening notes

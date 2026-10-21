@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import boto3
 import os
-from botocore.exceptions import ClientError
 from pathlib import Path
+
+import boto3
+from botocore.exceptions import ClientError
 
 
 class ObjectStorage:

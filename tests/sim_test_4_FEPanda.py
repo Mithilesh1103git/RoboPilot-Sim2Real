@@ -1,8 +1,9 @@
+import os
+import time
+
 import mujoco
 import mujoco.viewer
 import numpy as np
-import os
-import time
 
 # Point to your local panda.xml file
 LOCAL_ASSETS_PATH = (
