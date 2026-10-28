@@ -59,6 +59,7 @@ async def create_task(request: TaskRequest, background_tasks: BackgroundTasks):
         "status": "queued",
         "instruction": request.instruction,
         "scenario": request.scenario,
+        "seed": request.seed,
         "message": "Task accepted and queued for deterministic Panda pick-and-place execution.",
         "created_at": _now(),
         "started_at": None,
@@ -78,6 +79,7 @@ class TaskFromDatasetRequest(BaseModel):
     episode_id: str | None = None
     instruction: str | None = Field(default=None, min_length=3, max_length=500)
     scenario: str = Field(default="default", min_length=1, max_length=80)
+    seed: int = Field(default=7, ge=0, le=2_147_483_647)
 
 
 @router.post("/tasks/from-dataset", response_model=TaskStatus, status_code=202)
@@ -115,13 +117,18 @@ def create_task_from_dataset(
             detail="Provide an instruction or choose an episode that contains one",
         )
 
-    task_request = TaskRequest(instruction=instruction, scenario=request.scenario)
+    task_request = TaskRequest(
+        instruction=instruction,
+        scenario=request.scenario,
+        seed=request.seed,
+    )
     task_id = str(uuid4())
     task = {
         "task_id": task_id,
         "status": "queued",
         "instruction": task_request.instruction,
         "scenario": task_request.scenario,
+        "seed": task_request.seed,
         "message": f"Task accepted from dataset {manifest.dataset_id}, episode {selected.episode_id}.",
         "created_at": _now(),
         "started_at": None,
@@ -187,6 +194,7 @@ async def execute_task(task_id: str):
         )
         instruction = task["instruction"]
         scenario = task["scenario"]
+        seed = task["seed"]
         stop_event = task["stop_event"]
 
     try:
@@ -195,6 +203,7 @@ async def execute_task(task_id: str):
             instruction=instruction,
             stop_event=stop_event,
             scenario=scenario,
+            seed=seed,
         )
         with _tasks_lock:
             task = _tasks.get(task_id)

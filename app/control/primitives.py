@@ -7,6 +7,7 @@ import time
 import numpy as np
 
 from app.control.motion import move_end_effector
+from app.simulation.scenarios import Scenario, resolve_scenario
 
 
 class PrimitiveError(RuntimeError):
@@ -47,15 +48,17 @@ def pick_and_place(
     *,
     object_name="red_block",
     destination_name="blue_tray",
+    scenario: Scenario | None = None,
     stop_event=None,
 ) -> dict:
     """Attempt a physical grasp and placement using contacts and the Panda gripper."""
+    scenario = scenario or resolve_scenario()
     if object_name != "red_block" or destination_name != "blue_tray":
         raise ValueError(
             "The built-in deterministic scenario supports red_block → blue_tray."
         )
     environment.load()
-    environment.reset()
+    environment.reset(scenario)
     start = environment.body_position(object_name)
     tray = environment.body_position(destination_name)
     # Hand body origin is above the fingertips in the Panda model. These offsets
@@ -125,6 +128,7 @@ def pick_and_place(
         "success": True,
         "object": object_name,
         "destination": destination_name,
+        "scenario": scenario.to_dict(),
         "object_start": start.tolist(),
         "object_final": final_position.tolist(),
         "destination_position": tray.tolist(),

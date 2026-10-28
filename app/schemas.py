@@ -11,6 +11,7 @@ class TaskRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
     instruction: str = Field(min_length=3, max_length=500)
     scenario: str = Field(default="default", min_length=1, max_length=80)
+    seed: int = Field(default=7, ge=0, le=2_147_483_647)
 
 
 class PlanStep(BaseModel):
@@ -40,6 +41,7 @@ class TaskStatus(BaseModel):
     status: TaskState
     instruction: str = ""
     scenario: str = "default"
+    seed: int = 7
     message: str = ""
     created_at: str | None = None
     started_at: str | None = None

@@ -17,6 +17,8 @@ from typing import Any
 
 import numpy as np
 
+from app.simulation.scenarios import Scenario, resolve_scenario
+
 
 class SimulationEnvironment:
     def __init__(
@@ -148,11 +150,12 @@ class SimulationEnvironment:
             raise KeyError(f"MuJoCo object not found: {name}")
         return int(result)
 
-    def _set_home_state(self) -> None:
+    def _set_home_state(self, scenario: Scenario | None = None) -> None:
         """Set a known Panda home pose and initial free-object pose."""
         import mujoco
 
         assert self.model is not None and self.data is not None
+        scenario = scenario or resolve_scenario()
         home = [0.0, -0.35, 0.0, -2.15, 0.0, 1.85, 0.75]
         for i, value in enumerate(home, 1):
             jid = self._name_id(mujoco.mjtObj.mjOBJ_JOINT, f"joint{i}")
@@ -166,11 +169,14 @@ class SimulationEnvironment:
             self.data.qpos[int(self.model.jnt_qposadr[jid])] = 0.04
         gripper_id = self._name_id(mujoco.mjtObj.mjOBJ_ACTUATOR, "actuator8")
         self.data.ctrl[gripper_id] = 255.0
-        # Reset the free block to the deterministic start pose on every reset.
+        tray_id = self._name_id(mujoco.mjtObj.mjOBJ_BODY, scenario.destination_name)
+        self.model.body_pos[tray_id] = scenario.destination_position
         try:
-            jid = self._name_id(mujoco.mjtObj.mjOBJ_JOINT, "red_block_free")
+            jid = self._name_id(
+                mujoco.mjtObj.mjOBJ_JOINT, f"{scenario.object_name}_free"
+            )
             adr = int(self.model.jnt_qposadr[jid])
-            self.data.qpos[adr : adr + 3] = [0.48, -0.20, 0.425]
+            self.data.qpos[adr : adr + 3] = scenario.object_position
             self.data.qpos[adr + 3 : adr + 7] = [1.0, 0.0, 0.0, 0.0]
         except KeyError:
             pass
@@ -188,14 +194,14 @@ class SimulationEnvironment:
                 return actuator_id
         return None
 
-    def reset(self):
+    def reset(self, scenario: Scenario | None = None):
         with self._lock:
             if self.model is None or self.data is None:
                 self.load()
             import mujoco
 
             mujoco.mj_resetData(self.model, self.data)
-            self._set_home_state()
+            self._set_home_state(scenario)
             mujoco.mj_forward(self.model, self.data)
             self._sync_viewer()
             return self.observation()

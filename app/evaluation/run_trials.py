@@ -22,6 +22,7 @@ def run_trial(trial_id: int, seed: int, scenario: str = "default") -> dict:
         result = executor.run(
             "Pick up the red block and place it inside the blue tray.",
             scenario=scenario,
+            seed=seed,
         )
         return {
             "trial_id": trial_id,

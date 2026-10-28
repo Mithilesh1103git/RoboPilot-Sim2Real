@@ -38,7 +38,7 @@ class Settings:
         20,
         int(
             os.getenv(
-                "ROBOPILOT_MOTION_STEPS", os.getenv("ROBOBOT_MOTION_STEPS", "100")
+                "ROBOPILOT_MOTION_STEPS", os.getenv("ROBOBOT_MOTION_STEPS", "300")
             )
         ),
     )

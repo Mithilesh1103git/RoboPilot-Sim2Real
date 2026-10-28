@@ -9,6 +9,7 @@ from typing import Any
 
 from app.agent.recovery import choose_recovery
 from app.control.primitives import pick_and_place
+from app.simulation.scenarios import resolve_scenario
 
 
 class AgentState(StrEnum):
@@ -39,6 +40,7 @@ class TaskExecutor:
         n: int | None = None,
         stop_event=None,
         scenario: str = "default",
+        seed: int = 7,
     ) -> dict[str, Any]:
         """Run one deterministic red-block-to-blue-tray task and verify it.
 
@@ -52,18 +54,23 @@ class TaskExecutor:
             "attempts": 0,
             "instruction": instruction,
             "scenario": scenario,
+            "seed": seed,
             "attempt_history": [],
             "message": "Task has not started.",
         }
         normalized = (instruction or "").lower()
-        if scenario not in {"default", "panda_pick_place", "pick_and_place"}:
+        try:
+            scenario_config = resolve_scenario(scenario, seed)
+        except ValueError as exc:
             self.state = AgentState.FAILED
             result.update(
                 state=self.state.value,
-                message=f"Unsupported scenario: {scenario}",
+                message=str(exc),
                 duration_seconds=time.perf_counter() - started,
             )
             return result
+        result["scenario"] = scenario_config.name
+        result["scenario_config"] = scenario_config.to_dict()
         if not any(
             word in normalized for word in ("pick", "place", "block", "cube", "object")
         ):
@@ -93,7 +100,11 @@ class TaskExecutor:
                     self.environment.load()
                     attempt_result["pre_observation"] = self.environment.observation()
                     self.state = AgentState.EXECUTING
-                    outcome = pick_and_place(self.environment, stop_event=stop_event)
+                    outcome = pick_and_place(
+                        self.environment,
+                        scenario=scenario_config,
+                        stop_event=stop_event,
+                    )
                     self.state = AgentState.VERIFYING
                     if outcome.get("success") is True:
                         self.state = AgentState.SUCCEEDED

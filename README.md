@@ -7,7 +7,10 @@ Simulation-first scaffold for a language-guided robot manipulation agent. The in
 3. Add observation-based verification and bounded recovery.
 4. Compare the baseline and closed-loop agent with repeatable trials.
 
-> **Important:** This is a starter scaffold, not a finished robot controller. Several modules intentionally contain stubs or TODOs. No robot actions are executed by the API yet. The MuJoCo scene XML and robot model are not bundled; choose a model and verify its license before adding it.
+> **Important:** This is a simulation baseline, not a finished real-robot
+> controller. The API executes one deterministic Panda red-block-to-blue-tray
+> task. Planner-driven control, generalized scenarios, and hardware execution
+> are not enabled.
 
 ## Requirements
 
@@ -25,6 +28,7 @@ python -m venv .venv
 .venv\\Scripts\\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+python scripts/fetch_panda_assets.py
 Copy-Item .env.example .env
 ```
 
@@ -35,6 +39,7 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+python scripts/fetch_panda_assets.py
 cp .env.example .env
 ```
 
@@ -50,12 +55,7 @@ uvicorn app.main:app --reload
 - API docs: http://127.0.0.1:8000/docs
 - Starter UI: http://127.0.0.1:8000/web/index.html
 
-The starter UI is static and served by your browser. To make the `/web` path work as shown, add this to `app/main.py` before starting the app:
-
-```python
-from fastapi.staticfiles import StaticFiles
-app.mount("/web", StaticFiles(directory="web"), name="web")
-```
+The UI is served by the FastAPI application at `/web/`.
 
 ## Run tests
 
@@ -65,7 +65,8 @@ pytest -q
 
 ## Check the planner client
 
-The planner module uses the OpenAI Python SDK against the Nebius Token Factory OpenAI-compatible endpoint. It is not called by the task API until you wire it into `TaskExecutor`.
+The planner module uses the OpenAI Python SDK against the Nebius Token Factory
+OpenAI-compatible endpoint. It is not called by the default task API.
 
 ## Suggested implementation order
 
@@ -116,10 +117,17 @@ The `app/` package and `web/` UI are integrated for the deterministic Panda pick
 
 ```bash
 python -m pip install -r requirements.txt
+python scripts/fetch_panda_assets.py
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000/` for the UI or `http://127.0.0.1:8000/docs` for API documentation. The UI polls task status and telemetry. The simulation requires MuJoCo and the included Panda assets; successful physical manipulation must be confirmed by running the task in your local MuJoCo environment.
+Open `http://127.0.0.1:8000/` for the UI or `http://127.0.0.1:8000/docs` for API documentation. The UI polls task status and telemetry. The simulation requires MuJoCo and the
+downloaded Panda assets; successful manipulation must be confirmed by running
+the task in your local MuJoCo environment.
+
+Use `scenario: "randomized"` with an integer `seed` to run bounded,
+reproducible object and tray position variations. The default scenario and
+default seed `7` preserve the fixed baseline.
 
 The bundle intentionally excludes `.env`, `.git`, IDE workspace files, Python bytecode, and cache directories. Copy any required local environment values from `.env.example` into your own untracked `.env` file.
 

@@ -18,7 +18,12 @@
       <label for="instruction">Natural-language instruction</label>
       <textarea id="instruction" rows="3">Pick up the red block and place it inside the blue tray.</textarea>
       <label for="scenario">Scenario</label>
-      <select id="scenario"><option value="default">Default tabletop</option></select>
+      <select id="scenario">
+        <option value="default">Default tabletop</option>
+        <option value="randomized">Seeded randomized tabletop</option>
+      </select>
+      <label for="seed">Scenario seed</label>
+      <input id="seed" type="number" min="0" max="2147483647" value="7">
       <div class="actions">
         <button id="runTask">Submit task</button>
         <button id="resetSim" class="secondary">Reset</button>

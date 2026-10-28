@@ -68,10 +68,18 @@ byId('runTask')?.addEventListener('click', async () => {
   const button = byId('runTask');
   button.disabled = true;
   try {
+    const seed = Number.parseInt(byId('seed')?.value || '7', 10);
+    if (!Number.isInteger(seed) || seed < 0 || seed > 2147483647) {
+      throw new Error('Scenario seed must be an integer from 0 to 2147483647.');
+    }
     const response = await fetch('/api/v1/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instruction, scenario: byId('scenario')?.value || 'default' }),
+      body: JSON.stringify({
+        instruction,
+        scenario: byId('scenario')?.value || 'default',
+        seed,
+      }),
     });
     const task = await readResponse(response);
     setMessage(`Task ${task.status}: ${task.message || 'Task accepted.'}`);

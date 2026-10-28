@@ -1,12 +1,17 @@
 # Robot assets
 
-Add a MuJoCo MJCF model and scene here after verifying the source license.
+Robot meshes are excluded from Git. Install the deterministic baseline's pinned
+Franka Panda model from Google DeepMind's MuJoCo Menagerie:
 
-The starter project intentionally does not bundle a robot model or scene XML. A valid scene should include:
-- a robot arm and gripper with actuators,
-- a tabletop,
-- a graspable block with collision geometry,
-- a target tray with collision geometry,
-- a camera named `overview` (or update the camera observation code).
+```bash
+python scripts/fetch_panda_assets.py
+```
 
-Update `configs/default.yaml` with the actual scene path.
+The fetcher installs `franka_emika_panda/panda.xml`, its meshes, and the
+upstream license. It is pinned to MuJoCo Menagerie revision
+`f3b6013629c7b94f8ee93fd977b161fa8350f9bc`.
+
+Source: <https://github.com/google-deepmind/mujoco_menagerie/tree/f3b6013629c7b94f8ee93fd977b161fa8350f9bc/franka_emika_panda>
+
+License: Apache-2.0. Retain the downloaded `LICENSE` file when redistributing
+the model assets.
