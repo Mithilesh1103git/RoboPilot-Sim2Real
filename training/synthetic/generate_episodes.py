@@ -20,7 +20,12 @@ def flat(value):
 
 
 def generate_dataset(
-    env_id: str, episodes: int, seed: int, policy: str, output: str | Path
+    env_id: str = "Pendulum-v1",
+    episodes: int = 10,
+    seed: int = 7,
+    policy: str = "random",
+    output: str | Path = "training/datasets/transitions.npz",
+    robot_name: str = "panda",
 ) -> dict:
     if episodes < 1:
         raise ValueError("episodes must be >= 1")
@@ -28,7 +33,17 @@ def generate_dataset(
         raise ValueError("policy must be 'random' or 'zero'")
     import gymnasium as gym
 
-    env = gym.make(env_id)
+    if env_id in {
+        "RoboPilotPickPlace-v0",
+        "RoboPilotPandaPickPlace-v0",
+        "pick_and_place",
+        "panda_pick_place",
+    }:
+        from training.rl.env import make_env
+
+        env = make_env(env_id, robot_name=robot_name)
+    else:
+        env = gym.make(env_id)
     obs_l, act_l, rew_l, nxt_l, term_l, trunc_l, ids = [], [], [], [], [], [], []
     try:
         for eid in range(episodes):
@@ -62,6 +77,17 @@ def generate_dataset(
         terminated=np.asarray(term_l),
         truncated=np.asarray(trunc_l),
         episode_ids=np.asarray(ids, dtype=np.int32),
+        robot_name=np.asarray(
+            robot_name
+            if env_id
+            in {
+                "RoboPilotPickPlace-v0",
+                "RoboPilotPandaPickPlace-v0",
+                "pick_and_place",
+                "panda_pick_place",
+            }
+            else "external"
+        ),
     )
     return {
         "path": str(out),
@@ -70,18 +96,22 @@ def generate_dataset(
         "transitions": len(rew_l),
         "seed": seed,
         "policy": policy,
+        "robot_name": robot_name,
     }
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--env-id", default="Pendulum-v1")
     p.add_argument("--episodes", type=int, default=10)
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--policy", choices=["random", "zero"], default="random")
     p.add_argument("--output", default="training/datasets/transitions.npz")
-    a = p.parse_args()
-    result = generate_dataset(a.env_id, a.episodes, a.seed, a.policy, a.output)
+    p.add_argument("--robot-name", default="panda")
+    a = p.parse_args(argv)
+    result = generate_dataset(
+        a.env_id, a.episodes, a.seed, a.policy, a.output, a.robot_name
+    )
     print(f"Saved {result['transitions']} transitions to {Path(a.output).resolve()}")
 
 

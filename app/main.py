@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.datasets import router as datasets_router
+from app.api.robots import router as robots_router
 from app.api.tasks import router as tasks_router
 from app.api.telemetry import router as telemetry_router
 from app.config import settings
@@ -28,6 +29,7 @@ app.add_middleware(
 app.include_router(tasks_router)
 app.include_router(datasets_router)
 app.include_router(telemetry_router)
+app.include_router(robots_router)
 
 
 @app.get("/health", response_model=HealthStatus, tags=["system"])

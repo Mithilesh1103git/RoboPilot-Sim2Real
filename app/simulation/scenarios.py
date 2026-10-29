@@ -13,11 +13,14 @@ def seed_everything(seed: int) -> None:
         pass
 
 
-def default_scenario() -> dict:
+def default_scenario(robot_profile=None) -> dict:
+    profile = robot_profile or {}
+    task = profile.get("task", {})
     return {
-        "name": "default",
+        "name": "pick_and_place",
         "seed": 7,
-        "instruction": "Pick up the red block and place it inside the blue tray.",
-        "objects": ["red_block"],
-        "destination": "blue_tray",
+        "instruction": f"Pick up {task.get('object_name','red_block')} and place it inside {task.get('destination_name','blue_tray')}.",
+        "objects": [task.get("object_name", "red_block")],
+        "destination": task.get("destination_name", "blue_tray"),
+        "robot": profile.get("id", "panda"),
     }

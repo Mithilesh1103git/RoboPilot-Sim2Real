@@ -1,49 +1,43 @@
-# Original-project comparison audit
+# RoboPilot-Sim2Real v2.4 audit report
 
-Compared this codebase against the user-provided `RoboPilot-Sim2Real.zip`.
+## Source archive and preservation
 
-## File-level result
+The v2.4 package is based on the user-provided v2.3 archive. The earlier file-level comparison against the original uploaded project is retained: all original non-secret project files identified in that audit are present. `.git/`, IDE metadata, caches/bytecode, and `.env` secrets are intentionally excluded from distributable archives.
 
-All original non-secret project files are present in this archive. The comparison found no missing original project files after restoring the missing files/directories.
+## Added in v2.4
 
-Intentionally not copied from the uploaded archive:
-- `.git/`: repository metadata and history, not application source files.
-- `.idea/`: IDE-specific settings.
-- `.env` files: local credentials/secrets are not copied into distributable archives.
-- Python bytecode and cache directories.
+- Standalone training FastAPI application at `training/main.py`.
+- Vanilla HTML/CSS/JavaScript dashboard at `training/web/`.
+- Process-backed job manager with status, bounded logs, exit codes, stop requests, and output artifact discovery.
+- API operations for PPO/SAC training, simulator transition collection, policy evaluation, world-model training, datasets, artifacts, and explicit project-local artifact import/download.
+- Separate training API dependencies and startup documentation.
+- Dedicated dashboard container recipe and Compose file, while retaining the existing object-storage/replay-buffer worker as a separate deployment option.
+- API validation tests, including checks that training outputs remain within training-owned directories.
 
-The following original paths are preserved, including the previously missed paths:
-- `data/adapter/raw/` and `data/adapter/standardized/`
-- `runs/`
-- `web/`
-- root `main.py`
-- `test_api.ipynb`
-- original robot assets and simulation tests
-- evaluation helpers, telemetry and simulation helpers
-- training deployment, replay-buffer, rollout, reward and synthetic-data files
+## Validation performed
 
-## Test coverage restored
+- `python -m compileall -q app training main.py`: passed.
+- `node --check training/web/app.js`: passed when Node.js is available.
+- `pytest -q`: **26 passed**.
+- Training API smoke checks: dashboard, health, overview, jobs, datasets, artifacts, and API docs returned HTTP 200.
+- Invalid RL algorithm request returned HTTP 422.
+- Training output path escape checks returned HTTP 400.
+- Source scan found no training-to-runtime Python imports or runtime API URL references; the `app` mention in the training environment is explanatory documentation only.
 
-The rebuilt version had reduced `tests/test_data_adapter.py` to a single test. The original four test cases have now been restored, covering:
-- generic transition records and persistence
-- episode-oriented input payloads
-- rejecting records without actions
-- coordinate transforms and embodiment/joint mapping
+## Important limitations
 
-Validation after restoration:
-- Python syntax compilation passed.
-- `pytest -q`: **19 passed**.
+- The current validation environment does not have `mujoco`, `gymnasium`, or `stable-baselines3` installed. Therefore, this audit does **not** claim that an actual MuJoCo episode, RL training run, evaluation run, or world-model training job was executed end-to-end. Install `training/requirements-training.txt` in the training environment before those operations.
+- The job manager stores job metadata and logs in memory. Restarting the API loses job history; use one API worker only. Multi-worker persistence/queueing is not implemented.
+- Job cancellation terminates a subprocess on a best-effort basis and is not checkpoint-aware.
+- PPO/SAC checkpoints are not assumed to solve pick-and-place; run evaluation and report measured results.
+- Artifact import is a copy into training-owned storage, not policy promotion or runtime integration. Compatibility must be validated separately before a selected policy is used by runtime.
+- The dashboard API has no authentication. It is intended for localhost/trusted development use only until authentication and deployment hardening are added.
+- Passing unit/API tests does not prove the full runtime planner → controller → MuJoCo → verifier loop is successful. The Nebius API credential issue previously observed must be fixed in the local environment and the full runtime task tested there.
 
-## Important distinction: present does not mean unchanged
+## Architectural boundaries retained
 
-The rebuild intentionally changes content in a number of files rather than preserving the original implementation byte-for-byte. The main rewritten areas include:
-- runtime task orchestration, planner validation and control
-- MuJoCo runtime scene construction
-- data-adapter API integration
-- root launcher, web UI wiring and API smoke-test notebook
-- the training RL environment and world-model implementation
-- root and training documentation
-
-The original `training/deploy/` source files are present, but the deployment README was simplified during the rebuild. Their container/service flow should be reviewed and tested separately before relying on it; file presence alone does not prove the old deployment workflow still works end-to-end.
-
-The runtime and training codebases remain intentionally separate: `training/` must not import `app/`, call runtime APIs, or use the runtime LLM planner for training data, labels, rewards or policy learning.
+- `training/` does not import `app/` or call runtime APIs.
+- Training has its own MuJoCo assets/environment and job processes.
+- No LLM is used to generate training demonstrations, synthetic labels, rewards, or policy updates.
+- The runtime planner produces high-level intent only; validated controller code owns bounded robot execution.
+- Cross-application exchange is explicit artifact import/export only.

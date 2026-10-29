@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
-import sys
 from pathlib import Path
 
 from .replay_buffer import ReplayBuffer
@@ -98,11 +96,12 @@ def run_pipeline(args):
 
         synthetic_path = output_dir / "synthetic" / "transitions.npz"
         synthetic_report = generate_dataset(
-            env_id=getattr(args, "synthetic_env_id", "Pendulum-v1"),
+            env_id=getattr(args, "synthetic_env_id", "RoboPilotPickPlace-v0"),
             episodes=int(getattr(args, "synthetic_episodes", 10)),
             seed=int(getattr(args, "synthetic_seed", 7)),
             policy=getattr(args, "synthetic_policy", "random"),
             output=synthetic_path,
+            robot_name=getattr(args, "robot_name", "panda"),
         )
         dataset_paths.append(str(synthetic_path))
 
@@ -133,45 +132,33 @@ def run_pipeline(args):
     }
     if controller.should_update_world_model():
         checkpoint = output_dir / "world_model.pt"
-        cmd = [
-            sys.executable,
-            "-m",
-            "training.rl.world_model",
-            "--dataset",
-            str(merged),
-            "--output",
-            str(checkpoint),
-            "--epochs",
-            str(args.world_model_epochs),
-            "--device",
-            args.device,
-        ]
-        subprocess.run(cmd, check=True)
-        report["world_model"] = str(checkpoint)
+        from training.rl.train_world_model import run_training as train_world_model
+
+        world_model_result = train_world_model(
+            dataset=str(merged),
+            output=str(checkpoint),
+            epochs=int(args.world_model_epochs),
+            seed=7,
+        )
+        report["world_model"] = world_model_result["checkpoint"]
         controller.events.append(
             {"event": "world_model_trained", "checkpoint": str(checkpoint)}
         )
     if getattr(args, "env_id", "") and controller.should_update_policy():
         policy_path = output_dir / "policy"
-        cmd = [
-            sys.executable,
-            "-m",
-            "training.rl.train",
-            "--env-id",
-            args.env_id,
-            "--algorithm",
-            args.algorithm,
-            "--timesteps",
-            str(args.timesteps),
-            "--output",
-            str(policy_path),
-            "--device",
-            args.device,
-        ]
-        subprocess.run(cmd, check=True)
-        report["policy"] = str(policy_path)
+        from training.rl.train import run_training as train_policy
+
+        policy_result = train_policy(
+            env_id=args.env_id,
+            robot_name=getattr(args, "robot_name", "panda"),
+            algorithm=args.algorithm,
+            timesteps=int(args.timesteps),
+            output=str(policy_path),
+            device=args.device,
+        )
+        report["policy"] = policy_result["checkpoint"]
         controller.events.append(
-            {"event": "policy_trained", "checkpoint": str(policy_path)}
+            {"event": "policy_trained", "checkpoint": policy_result["checkpoint"]}
         )
     controller.events.append(
         {"event": "pipeline_completed", "synthetic_generation": bool(synthetic_report)}
@@ -181,7 +168,51 @@ def run_pipeline(args):
     return report
 
 
-def main():
+def run_flow_pipeline(
+    datasets=None,
+    output_dir="training/experiments/flow_run",
+    replay_capacity=100000,
+    max_queue_size=100000,
+    world_model_every=1,
+    rl_every=1,
+    world_model_epochs=50,
+    env_id="",
+    algorithm="PPO",
+    timesteps=10000,
+    device="auto",
+    generate_synthetic=False,
+    synthetic_env_id="RoboPilotPickPlace-v0",
+    robot_name="panda",
+    synthetic_episodes=10,
+    synthetic_seed=7,
+    synthetic_policy="random",
+):
+    """Keyword-based Python API for the complete flow pipeline."""
+    from types import SimpleNamespace
+
+    args = SimpleNamespace(
+        datasets=list(datasets or []),
+        output_dir=output_dir,
+        replay_capacity=replay_capacity,
+        max_queue_size=max_queue_size,
+        world_model_every=world_model_every,
+        rl_every=rl_every,
+        world_model_epochs=world_model_epochs,
+        env_id=env_id,
+        algorithm=algorithm,
+        timesteps=timesteps,
+        device=device,
+        generate_synthetic=generate_synthetic,
+        synthetic_env_id=synthetic_env_id,
+        synthetic_episodes=synthetic_episodes,
+        synthetic_seed=synthetic_seed,
+        synthetic_policy=synthetic_policy,
+        robot_name=robot_name,
+    )
+    return run_pipeline(args)
+
+
+def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
         "--datasets", nargs="*", default=[], help="Optional transition NPZ files"
@@ -205,11 +236,12 @@ def main():
         action="store_true",
         help="Generate Stage 4 transitions inside this pipeline run",
     )
-    p.add_argument("--synthetic-env-id", default="Pendulum-v1")
+    p.add_argument("--synthetic-env-id", default="RoboPilotPickPlace-v0")
+    p.add_argument("--robot-name", default="panda")
     p.add_argument("--synthetic-episodes", type=int, default=10)
     p.add_argument("--synthetic-seed", type=int, default=7)
     p.add_argument("--synthetic-policy", choices=["random", "zero"], default="random")
-    a = p.parse_args()
+    a = p.parse_args(argv)
     run_pipeline(a)
 
 

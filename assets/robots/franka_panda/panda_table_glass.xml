@@ -1,0 +1,106 @@
+
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco model="franka_panda_scene">
+
+  <compiler angle="radian" meshdir="assets"/>
+
+  <!-- Robot model -->
+  <include file="panda.xml"/>
+
+  <!-- Scene visualization -->
+  <statistic center="0.48 0.0 0.45" extent="1.2"/>
+
+  <visual>
+    <headlight
+      diffuse="0.6 0.6 0.6"
+      ambient="0.3 0.3 0.3"
+      specular="0 0 0"/>
+    <global offwidth="640" offheight="480"/>
+  </visual>
+
+  <worldbody>
+
+    <!-- Ground plane with a unique geom name -->
+    <geom
+      name="scene_floor"
+      type="plane"
+      pos="0 0 0"
+      size="0 0 0.05"
+      rgba="0.8 0.8 0.8 1"/>
+
+    <!-- Scene lighting -->
+    <light
+      name="scene_light"
+      pos="0 0 3"
+      dir="0 0 -1"
+      directional="false"/>
+
+    <!-- Table with a unique body name; top surface at z = 0.4 -->
+    <body name="scene_table" pos="0.4 0 0">
+      <geom
+        name="scene_table_top"
+        type="box"
+        size="0.4 0.6 0.4"
+        rgba="0.4 0.25 0.15 1"
+        friction="1.0 0.005 0.0001"/>
+    </body>
+
+    <!-- Destination tray -->
+    <body name="blue_tray" pos="0.57 0.22 0.405">
+      <freejoint name="blue_tray_joint"/>
+
+      <!-- Tray base -->
+      <geom
+        name="blue_tray_bottom"
+        type="box"
+        size="0.13 0.13 0.005"
+        rgba="0.2 0.35 0.9 1"
+        mass="0.3"
+        friction="1.0 0.005 0.0001"/>
+
+      <!-- North and south walls -->
+      <geom
+        name="blue_tray_rim_n"
+        type="box"
+        pos="0 0.125 0.015"
+        size="0.13 0.005 0.015"
+        rgba="0.2 0.35 0.9 1"/>
+
+      <geom
+        name="blue_tray_rim_s"
+        type="box"
+        pos="0 -0.125 0.015"
+        size="0.13 0.005 0.015"
+        rgba="0.2 0.35 0.9 1"/>
+
+      <!-- East and west walls -->
+      <geom
+        name="blue_tray_rim_e"
+        type="box"
+        pos="0.125 0 0.015"
+        size="0.005 0.12 0.015"
+        rgba="0.2 0.35 0.9 1"/>
+
+      <geom
+        name="blue_tray_rim_w"
+        type="box"
+        pos="-0.125 0 0.015"
+        size="0.005 0.12 0.015"
+        rgba="0.2 0.35 0.9 1"/>
+    </body>
+
+    <!-- Pick object: red block -->
+    <body name="red_block" pos="0.48 -0.2 0.425">
+      <freejoint name="red_block_joint"/>
+
+      <geom
+        name="red_block_geom"
+        type="box"
+        size="0.022 0.022 0.025"
+        rgba="0.9 0.12 0.1 1"
+        mass="0.08"
+        friction="1.0 0.005 0.0001"/>
+    </body>
+
+  </worldbody>
+</mujoco>

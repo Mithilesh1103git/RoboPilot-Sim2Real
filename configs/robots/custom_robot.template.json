@@ -1,0 +1,64 @@
+{
+  "id": "my_robot",
+  "display_name": "My Robot",
+  "control_mode": "position",
+  "asset_directory": "my_robot",
+  "mjcf_file": "robot.xml",
+  "arm_joint_names": [
+    "shoulder_joint",
+    "elbow_joint",
+    "wrist_joint"
+  ],
+  "home_positions": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "end_effector_body": "tool_link",
+  "gripper_actuators": [
+    "gripper_actuator"
+  ],
+  "gripper_open_control": [
+    1.0
+  ],
+  "gripper_closed_control": [
+    0.0
+  ],
+  "gripper_joint_positions": {},
+  "task": {
+    "object_name": "red_block",
+    "destination_name": "blue_tray",
+    "object_start": [
+      0.48,
+      -0.2,
+      0.425
+    ],
+    "destination_start": [
+      0.57,
+      0.22,
+      0.405
+    ],
+    "table_position": [
+      0.48,
+      0,
+      0.38
+    ],
+    "object_half_size": [
+      0.022,
+      0.022,
+      0.025
+    ],
+    "tray_half_size": [
+      0.13,
+      0.13,
+      0.005
+    ],
+    "lift_min_height": 0.025,
+    "placement_tolerance": [
+      0.105,
+      0.105,
+      0.085
+    ]
+  },
+  "notes": "Template only. Replace every joint/body/actuator name and value with names and control semantics from your robot MJCF."
+}

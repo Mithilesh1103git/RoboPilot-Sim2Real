@@ -2,6 +2,7 @@ const byId = (id) => document.getElementById(id);
 const events = byId('events');
 const terminalStates = new Set(['succeeded', 'failed', 'stopped']);
 const activeTasks = new Set();
+let robotProfiles = [];
 let telemetryTimer = null;
 
 function addEvent(message) {
@@ -71,7 +72,7 @@ byId('runTask')?.addEventListener('click', async () => {
     const response = await fetch('/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instruction, scenario: 'panda_pick_place' }),
+      body: JSON.stringify({ instruction, scenario: byId('scenario')?.value || 'pick_and_place', robot_name: byId('robotName')?.value || 'panda' }),
     });
     const task = await readResponse(response);
     setMessage(`Task ${task.status}: ${task.message || 'Task accepted.'}`);
@@ -101,6 +102,28 @@ byId('resetSim')?.addEventListener('click', async () => {
     button.disabled = false;
   }
 });
+
+async function loadRobots() {
+  const select = byId('robotName');
+  if (!select) return;
+  try {
+    const response = await fetch('/robots', {cache:'no-store'});
+    const data = await readResponse(response);
+    robotProfiles = data.items || [];
+    const previous = select.value;
+    select.replaceChildren();
+    for (const robot of robotProfiles) {
+      const option = document.createElement('option');
+      option.value = robot.id;
+      option.textContent = robot.display_name || robot.id;
+      select.append(option);
+    }
+    if (robotProfiles.some(robot => robot.id === previous)) select.value = previous;
+  } catch (error) {
+    addEvent(`Could not load robot profiles: ${error.message}`);
+  }
+}
+loadRobots();
 
 async function refreshTelemetry() {
   try {

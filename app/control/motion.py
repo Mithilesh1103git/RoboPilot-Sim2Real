@@ -1,4 +1,4 @@
-"""Damped least-squares IK and bounded joint-space trajectory execution."""
+"""Robot-profile-driven damped least-squares IK and bounded trajectories."""
 
 from dataclasses import dataclass
 
@@ -16,24 +16,14 @@ class MotionResult:
 
 
 def _joint_data(env):
-    import mujoco
-
-    qids = []
-    dofs = []
-    aids = []
-    lows = []
-    highs = []
-    for i in range(1, 8):
-        jid = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_JOINT, f"joint{i}")
-        aid = env._actuator_for_joint(jid)
-        if jid < 0 or aid is None:
-            raise RuntimeError(f"Panda joint/actuator {i} is missing.")
-        qids.append(int(env.model.jnt_qposadr[jid]))
-        dofs.append(int(env.model.jnt_dofadr[jid]))
-        aids.append(int(aid))
-        lows.append(float(env.model.jnt_range[jid, 0]))
-        highs.append(float(env.model.jnt_range[jid, 1]))
-    return qids, dofs, aids, np.array(lows), np.array(highs)
+    qids, dofs, aids, lows, highs = env._joint_info()
+    return (
+        qids,
+        dofs,
+        aids,
+        np.asarray(lows, dtype=float),
+        np.asarray(highs, dtype=float),
+    )
 
 
 def inverse_kinematics(
@@ -44,14 +34,23 @@ def inverse_kinematics(
     target = np.asarray(target_xyz, dtype=float)
     if target.shape != (3,) or not np.all(np.isfinite(target)):
         raise ValueError("Target must be finite XYZ.")
-    hand = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_BODY, "hand")
-    if hand < 0:
-        raise RuntimeError("Panda hand body missing.")
+    profile = env.profile
+    ee = mujoco.mj_name2id(
+        env.model, mujoco.mjtObj.mjOBJ_BODY, profile["end_effector_body"]
+    )
+    if ee < 0:
+        raise RuntimeError(
+            f"Configured end-effector body {profile['end_effector_body']!r} is missing."
+        )
     qids, dofs, _, lows, highs = _joint_data(env)
     original = env.data.qpos[qids].copy()
+    if len(qids) < 3:
+        raise RuntimeError(
+            "Cartesian position IK requires at least three configured arm joints."
+        )
     for _ in range(max_iterations):
         mujoco.mj_forward(env.model, env.data)
-        error = target - env.data.xpos[hand].copy()
+        error = target - env.data.xpos[ee].copy()
         if np.linalg.norm(error) < tolerance:
             answer = env.data.qpos[qids].copy()
             env.data.qpos[qids] = original
@@ -59,7 +58,7 @@ def inverse_kinematics(
             return answer
         jacp = np.zeros((3, env.model.nv))
         jacr = np.zeros((3, env.model.nv))
-        mujoco.mj_jacBody(env.model, env.data, jacp, jacr, hand)
+        mujoco.mj_jacBody(env.model, env.data, jacp, jacr, ee)
         jac = jacp[:, dofs]
         dq = jac.T @ np.linalg.solve(jac @ jac.T + damping * damping * np.eye(3), error)
         env.data.qpos[qids] = np.clip(
@@ -67,7 +66,7 @@ def inverse_kinematics(
         )
     env.data.qpos[qids] = original
     mujoco.mj_forward(env.model, env.data)
-    if np.linalg.norm(target - env.data.xpos[hand]) > 0.045:
+    if np.linalg.norm(target - env.data.xpos[ee]) > 0.045:
         raise ValueError(f"IK failed to converge to {target.tolist()}.")
     return env.data.qpos[qids].copy()
 
@@ -99,7 +98,9 @@ def execute_joint_trajectory(env, targets, *, max_steps=120, stop_event=None):
         if float(np.max(np.abs(env.data.qpos[qids] - targets))) < 0.06:
             converged = True
             break
-    hand = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_BODY, "hand")
+    ee = mujoco.mj_name2id(
+        env.model, mujoco.mjtObj.mjOBJ_BODY, env.profile["end_effector_body"]
+    )
     return MotionResult(
         converged,
         (
@@ -108,7 +109,7 @@ def execute_joint_trajectory(env, targets, *, max_steps=120, stop_event=None):
             else "Joint trajectory did not converge."
         ),
         steps,
-        env.data.xpos[hand].tolist(),
+        env.data.xpos[ee].tolist(),
     )
 
 

@@ -17,13 +17,15 @@
       <div class="panel-heading"><h1>Robot task</h1><span class="eyebrow">01 / INSTRUCTION</span></div>
       <label for="instruction">Natural-language instruction</label>
       <textarea id="instruction" rows="3">Pick up the red block and place it inside the blue tray.</textarea>
-      <label for="scenario">Scenario</label>
-      <select id="scenario"><option value="panda_pick_place">Panda pick and place</option></select>
+      <label for="robotName">Robot</label>
+      <select id="robotName"><option value="panda">Franka Emika Panda</option></select>
+      <label for="scenario">Task scenario</label>
+      <select id="scenario"><option value="pick_and_place">Pick and place</option></select>
       <div class="actions">
         <button id="runTask">Submit task</button>
         <button id="resetSim" class="secondary">Reset</button>
       </div>
-      <p id="taskMessage" class="muted">Submit a task to run deterministic Panda pick-and-place in MuJoCo.</p>
+      <p id="taskMessage" class="muted">Choose a configured robot profile and submit a pick-and-place task in MuJoCo.</p>
     </section>
     <section class="panel">
       <div class="panel-heading"><h2>Simulation</h2><span class="eyebrow">02 / ENVIRONMENT</span></div>

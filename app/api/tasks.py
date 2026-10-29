@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException
 from app.agent.executor import TaskExecutor
 from app.config import settings
 from app.planner.nemotron import NemotronPlanner
+from app.robots.registry import load_robot_profile
 from app.schemas import TaskRequest, TaskStatus
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -37,7 +38,9 @@ def _run_task(task_id, request):
         from app.simulation.environment import SimulationEnvironment
 
         result = TaskExecutor(
-            SimulationEnvironment(), planner, settings.max_retries
+            SimulationEnvironment(robot_name=request.robot_name),
+            planner,
+            settings.max_retries,
         ).run(
             request.instruction,
             stop_event=_stop_events[task_id],
@@ -69,12 +72,20 @@ def _run_task(task_id, request):
 
 @router.post("", response_model=TaskStatus, status_code=202)
 def create_task(request: TaskRequest):
+    robot_name = request.robot_name or settings.robot_name
+    try:
+        load_robot_profile(robot_name)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if request.scenario not in {"pick_and_place", "panda_pick_place"}:
+        raise HTTPException(400, f"Unsupported scenario: {request.scenario}")
     task_id = str(uuid.uuid4())
     record = {
         "task_id": task_id,
         "status": "queued",
         "instruction": request.instruction,
         "scenario": request.scenario,
+        "robot_name": robot_name,
         "message": "Queued for execution.",
         "created_at": _now(),
         "started_at": None,

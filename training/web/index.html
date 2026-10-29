@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>RoboPilot · Training Lab</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">R</div><div><strong>RoboPilot</strong><span>SIM2REAL LAB</span></div></div>
+    <nav aria-label="Main navigation">
+      <a class="nav-link active" href="#overview">Overview</a>
+      <a class="nav-link" href="#experiments">Experiments</a>
+      <a class="nav-link" href="#datasets">Datasets</a>
+      <a class="nav-link" href="#artifacts">Artifacts</a>
+    </nav>
+    <div class="sidebar-note"><span class="status-dot"></span><div><strong>Training service</strong><small id="service-status">Checking health…</small></div></div>
+    <div class="boundary-note"><strong>Independent application</strong><p>This training service owns its environments and jobs. Runtime integration happens only through explicit artifact exchange.</p></div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar"><div><p class="eyebrow">SIMULATION · LEARNING · EVALUATION</p><h1>Training Lab</h1><p class="subtitle">Manage manipulation experiments, simulator-generated datasets, and evaluated model artifacts.</p></div><button id="refresh-button" class="button button-secondary">Refresh data</button></header>
+
+    <section id="overview" class="stats-grid" aria-label="Training overview">
+      <article class="stat-card"><span>Active jobs</span><strong id="active-jobs">—</strong><small>Queued or running</small></article>
+      <article class="stat-card"><span>Total jobs</span><strong id="total-jobs">—</strong><small>Current service session</small></article>
+      <article class="stat-card"><span>Datasets</span><strong id="dataset-count">—</strong><small>Training-owned data</small></article>
+      <article class="stat-card"><span>Artifacts</span><strong id="artifact-count">—</strong><small>Checkpoints and model files</small></article>
+    </section>
+
+    <section id="experiments" class="content-grid">
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">NEW RUN</p><h2>Launch experiment</h2></div><span class="pill">Background job</span></div>
+        <label for="robot-name">Robot profile</label><select id="robot-name"><option value="panda">Franka Emika Panda</option></select>
+        <label for="job-kind">Experiment type</label>
+        <select id="job-kind"><option value="rl">RL policy training</option><option value="synthetic">Collect synthetic transitions</option><option value="evaluate">Evaluate checkpoint</option><option value="world-model">Train world model</option></select>
+        <form id="job-form">
+          <div id="fields-rl" class="form-fields">
+            <div class="field-row"><div><label for="algorithm">Algorithm</label><select id="algorithm"><option>PPO</option><option>SAC</option></select></div><div><label for="timesteps">Timesteps</label><input id="timesteps" type="number" min="100" max="100000000" value="50000" required></div></div>
+            <div class="field-row"><div><label for="seed">Random seed</label><input id="seed" type="number" min="0" value="7" required></div><div><label for="device">Device</label><select id="device"><option value="auto">Automatic</option><option value="cpu">CPU</option><option value="cuda">CUDA</option></select></div></div>
+            <label for="rl-output">Output path</label><input id="rl-output" value="training/runs/panda_ppo" required>
+          </div>
+          <div id="fields-synthetic" class="form-fields hidden">
+            <label for="episodes">Episodes to collect</label><input id="episodes" type="number" min="1" max="10000" value="20" required>
+            <label for="synthetic-seed">Random seed</label><input id="synthetic-seed" type="number" min="0" value="7" required>
+            <label for="synthetic-output">Dataset output path</label><input id="synthetic-output" value="training/datasets/transitions.npz" required>
+            <p class="field-help">Uses the training-owned MuJoCo environment and sampled actions. This collects transitions; it does not imply that a policy has learned the task.</p>
+          </div>
+          <div id="fields-evaluate" class="form-fields hidden">
+            <label for="eval-checkpoint">Checkpoint path</label><input id="eval-checkpoint" placeholder="training/runs/panda_ppo.zip" required>
+            <div class="field-row"><div><label for="eval-algorithm">Algorithm</label><select id="eval-algorithm"><option>PPO</option><option>SAC</option></select></div><div><label for="eval-episodes">Evaluation episodes</label><input id="eval-episodes" type="number" min="1" max="1000" value="10" required></div></div>
+            <label for="eval-seed">Random seed</label><input id="eval-seed" type="number" min="0" value="100" required>
+          </div>
+          <div id="fields-world-model" class="form-fields hidden">
+            <label for="wm-dataset">Input dataset</label><input id="wm-dataset" value="training/datasets/transitions.npz" required>
+            <label for="wm-output">Model output path</label><input id="wm-output" value="training/runs/world_model.pt" required>
+            <label for="wm-epochs">Epochs</label><input id="wm-epochs" type="number" min="1" max="10000" value="30" required>
+          </div>
+          <button class="button button-primary full-width" id="start-button" type="submit">Start training job</button>
+          <p id="form-message" class="form-message" role="status"></p>
+        </form>
+      </article>
+
+      <article class="panel jobs-panel">
+        <div class="panel-heading"><div><p class="eyebrow">EXECUTION</p><h2>Recent jobs</h2></div><span id="job-refresh-state" class="muted">Auto-refresh · 3s</span></div>
+        <div id="jobs-list" class="jobs-list"><div class="empty-state">Loading jobs…</div></div>
+      </article>
+    </section>
+
+    <section class="panel log-panel">
+      <div class="panel-heading"><div><p class="eyebrow">LIVE OUTPUT</p><h2 id="logs-title">Job logs</h2></div><button id="stop-job-button" class="button button-danger" disabled>Stop selected job</button></div>
+      <div id="selected-job-meta" class="selected-job-meta">Select a job to inspect its output. Logs are read from the actual subprocess.</div>
+      <pre id="job-logs" class="log-output">No job selected.</pre>
+    </section>
+
+    <section class="bottom-grid">
+      <article id="datasets" class="panel"><div class="panel-heading"><div><p class="eyebrow">DATA</p><h2>Datasets</h2></div></div><div id="datasets-list" class="file-list"><div class="empty-state">Loading datasets…</div></div></article>
+      <article id="artifacts" class="panel"><div class="panel-heading"><div><p class="eyebrow">OUTPUTS</p><h2>Artifacts</h2></div></div><div id="artifacts-list" class="file-list"><div class="empty-state">Loading artifacts…</div></div><div class="import-box"><label for="import-source">Explicit artifact import · project-relative path</label><div class="field-row"><input id="import-source" placeholder="data/adapter/standardized/example.npz"><input id="import-name" placeholder="imported_dataset.npz"></div><button id="import-button" class="button button-secondary">Import into training</button><p class="field-help">Copies a selected project file into training-owned storage. It does not call the runtime API or automatically promote a policy.</p><p id="import-message" class="form-message" role="status"></p></div></article>
+    </section>
+    <footer>RoboPilot Sim2Real · Training API · Training-owned simulator and artifacts</footer>
+  </main>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

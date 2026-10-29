@@ -1,4 +1,4 @@
-"""Executable bounded Panda pick-and-place primitive."""
+"""Profile-driven pick-and-place primitive for configured MuJoCo robots."""
 
 from app.agent.verifier import verify_lift, verify_object_in_destination
 from app.control.motion import move_end_effector
@@ -14,13 +14,12 @@ def _check_stop(stop_event):
 
 
 def _set_gripper(env, opened, stop_event=None):
-    import mujoco
-
     _check_stop(stop_event)
-    aid = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_ACTUATOR, "actuator8")
-    if aid < 0:
-        raise PrimitiveError("Panda gripper actuator8 is missing.")
-    env.data.ctrl[aid] = 255.0 if opened else 0.0
+    if not env.profile.get("gripper_actuators"):
+        raise PrimitiveError(
+            f"Robot profile {env.robot_name!r} has no configured gripper actuators."
+        )
+    env.set_gripper(opened)
     for _ in range(80):
         _check_stop(stop_event)
         env.step()
@@ -34,16 +33,22 @@ def _move(env, xyz, stop_event=None):
     return result
 
 
-def pick_and_place(
-    env, *, object_name="red_block", destination_name="blue_tray", stop_event=None
-):
-    if object_name != "red_block" or destination_name != "blue_tray":
-        raise ValueError("Only red_block → blue_tray is supported.")
+def pick_and_place(env, *, object_name=None, destination_name=None, stop_event=None):
+    task = env.profile["task"]
+    object_name = object_name or task.get("object_name", "red_block")
+    destination_name = destination_name or task.get("destination_name", "blue_tray")
+    if object_name != task.get(
+        "object_name", "red_block"
+    ) or destination_name != task.get("destination_name", "blue_tray"):
+        raise ValueError(
+            f"Requested object/destination are not configured for robot {env.robot_name!r}."
+        )
     env.load()
     env.reset()
     start = env.body_position(object_name)
     tray = env.body_position(destination_name)
     trace = []
+    lift_min = float(task.get("lift_min_height", 0.025))
     _set_gripper(env, True, stop_event)
     _move(env, [start[0], start[1], start[2] + 0.12], stop_event)
     trace.append({"action": "approach_object", "success": True})
@@ -52,7 +57,7 @@ def pick_and_place(
     trace.append({"action": "grasp_object", "success": True})
     _move(env, [start[0], start[1], start[2] + 0.16], stop_event)
     lifted = env.body_position(object_name)
-    lift_ok = verify_lift(start, lifted)
+    lift_ok = verify_lift(start, lifted, min_height=lift_min)
     trace.append(
         {
             "action": "lift_object",
@@ -73,12 +78,14 @@ def pick_and_place(
         _check_stop(stop_event)
         env.step()
     final = env.body_position(object_name)
-    verdict = verify_object_in_destination(final, tray)
+    tolerance = task.get("placement_tolerance", [0.105, 0.105, 0.085])
+    verdict = verify_object_in_destination(final, tray, tolerance=tolerance)
     trace.append({"action": "verify", "success": verdict["success"], **verdict})
     if not verdict["success"]:
         raise PrimitiveError(f"Placement verification failed: {verdict['reason']}.")
     return {
         "success": True,
+        "robot": env.robot_name,
         "object": object_name,
         "destination": destination_name,
         "object_start": start.tolist(),

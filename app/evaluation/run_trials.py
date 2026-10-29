@@ -7,17 +7,25 @@ from pathlib import Path
 
 from app.agent.executor import TaskExecutor
 from app.config import settings
+from app.planner.nemotron import NemotronPlanner
 from app.simulation.environment import SimulationEnvironment
 
 
-def run_trial(trial_id: int, seed: int, scenario: str = "default") -> dict:
+def run_trial(
+    trial_id: int,
+    seed: int,
+    scenario: str = "pick_and_place",
+    robot_name: str | None = None,
+) -> dict:
     # The current baseline is deterministic. Seed is retained in the record so
     # randomized scenes can be introduced without changing the output schema.
     started = time.perf_counter()
     env = SimulationEnvironment(
-        asset_root=settings.assets_dir, robot_name="panda", headless=True
+        asset_root=settings.assets_dir, robot_name=robot_name or settings.robot_name
     )
-    executor = TaskExecutor(env, planner=None, max_retries=settings.max_retries)
+    executor = TaskExecutor(
+        env, planner=NemotronPlanner(), max_retries=settings.max_retries
+    )
     try:
         result = executor.run(
             "Pick up the red block and place it inside the blue tray.",

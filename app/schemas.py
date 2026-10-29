@@ -17,7 +17,8 @@ ActionName = Literal[
 class TaskRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     instruction: str = Field(min_length=5, max_length=500)
-    scenario: Literal["panda_pick_place"] = "panda_pick_place"
+    scenario: str = Field(default="pick_and_place", min_length=1, max_length=80)
+    robot_name: str | None = Field(default=None, min_length=1, max_length=80)
 
 
 class PlanStep(BaseModel):
@@ -30,7 +31,7 @@ class PlanStep(BaseModel):
 
 class TaskPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    task: Literal["pick_and_place"] = "pick_and_place"
+    task: str = "pick_and_place"
     target_object: str = Field(min_length=1, max_length=80)
     destination: str = Field(min_length=1, max_length=80)
     steps: list[PlanStep] = Field(min_length=1, max_length=8)
@@ -42,6 +43,7 @@ class TaskStatus(BaseModel):
     status: Literal["queued", "running", "succeeded", "failed", "stopped"]
     instruction: str
     scenario: str
+    robot_name: str = "panda"
     message: str = ""
     created_at: str
     started_at: str | None = None

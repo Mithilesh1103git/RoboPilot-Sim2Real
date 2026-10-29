@@ -1,5 +1,6 @@
 """Planner-in-the-loop execution state machine."""
 
+import inspect
 import threading
 import time
 from enum import StrEnum
@@ -30,7 +31,7 @@ class TaskExecutor:
         self.state = AgentState.IDLE
         self._lock = threading.RLock()
 
-    def run(self, instruction, *, stop_event=None, scenario="panda_pick_place"):
+    def run(self, instruction, *, stop_event=None, scenario="pick_and_place"):
         started = time.perf_counter()
         result = {
             "success": False,
@@ -41,16 +42,28 @@ class TaskExecutor:
             "attempt_history": [],
         }
         try:
-            if scenario != "panda_pick_place":
+            if scenario not in {"pick_and_place", "panda_pick_place"}:
                 raise ValueError(f"Unsupported scenario: {scenario}")
+            #### Observe
             self.state = AgentState.OBSERVING
             self.environment.load()
             observation = self.environment.observation()
+            profile = getattr(self.environment, "profile", None)
+            if profile is None:
+                from app.robots.registry import load_robot_profile
+
+                profile = load_robot_profile()
             result["initial_observation"] = observation
+            #### Plan
             self.state = AgentState.PLANNING
-            plan = self.planner.plan(instruction, observation)
+            plan = self.planner.plan(
+                instruction,
+                observation,
+                profile=profile,
+            )
+            #### Validate
             self.state = AgentState.VALIDATING
-            plan = validate_plan(plan, instruction)
+            plan = validate_plan(plan, instruction, profile)
             result["validated_plan"] = plan.model_dump()
             if stop_event is not None and stop_event.is_set():
                 raise InterruptedError("Task stop requested before execution.")
@@ -58,6 +71,7 @@ class TaskExecutor:
                 result["attempts"] = attempt + 1
                 entry = {"attempt": attempt + 1}
                 try:
+                    #### Execute
                     self.state = AgentState.EXECUTING
                     motion = pick_and_place(
                         self.environment,
@@ -65,11 +79,13 @@ class TaskExecutor:
                         destination_name=plan.destination,
                         stop_event=stop_event,
                     )
+                    #### Verify
                     self.state = AgentState.VERIFYING
                     if not motion.get("success"):
                         raise RuntimeError("Simulator did not verify placement.")
                     entry.update(success=True, result=motion)
                     result["attempt_history"].append(entry)
+                    #### Success or Failure
                     self.state = AgentState.SUCCEEDED
                     result.update(
                         success=True,
@@ -78,6 +94,7 @@ class TaskExecutor:
                     )
                     break
                 except InterruptedError as exc:
+                    #### Task Stop
                     self.state = AgentState.STOPPED
                     entry.update(success=False, error=str(exc))
                     result["attempt_history"].append(entry)
@@ -90,18 +107,22 @@ class TaskExecutor:
                         choose_recovery(attempt, self.max_retries, "controller_failure")
                         != "reset_and_retry"
                     ):
+                        #### Task Failure
                         self.state = AgentState.FAILED
                         result.update(
                             message="Task failed; bounded recovery exhausted.",
                             error=f"{type(exc).__name__}: {exc}",
                         )
                         break
+                    #### Task Recovery
                     self.state = AgentState.RECOVERING
             result["final_observation"] = self.environment.observation()
         except InterruptedError as exc:
+            #### Task Stop
             self.state = AgentState.STOPPED
             result.update(message=str(exc), error=str(exc))
         except Exception as exc:
+            #### Task Failed
             self.state = AgentState.FAILED
             result.update(
                 message=f"Task failed: {exc}", error=f"{type(exc).__name__}: {exc}"
