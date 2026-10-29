@@ -1,25 +1,15 @@
 app:
-  name: RoboPilot
-  log_level: INFO
-
+  name: RoboPilot-Sim2Real
 simulation:
   engine: mujoco
+  robot_name: panda
+  assets_dir: assets/robots
   headless: true
-  model_path: assets/scene.xml
-  timestep: 0.002
-  seed: 7
-
 planner:
-  provider: nebius_token_factory
-  model: ""  # Set NEBIUS_MODEL to a model ID available to your account.
+  provider: nebius
   temperature: 0.1
-  max_retries: 2
-
+  timeout_seconds: 45
 safety:
-  max_joint_velocity: 1.0
-  max_recovery_retries: 2
-  require_plan_validation: true
-
-evaluation:
-  default_trials: 30
-  output_dir: runs
+  max_recovery_retries: 1
+  supported_object: red_block
+  supported_destination: blue_tray

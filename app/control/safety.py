@@ -1,22 +1,18 @@
-"""Small reusable safety checks for action names and joint commands."""
+"""Joint-space safety gates."""
 
-ALLOWED_ACTIONS = {
-    "approach_object",
-    "grasp_object",
-    "lift_object",
-    "move_to_destination",
-    "release_object",
-    "verify",
-}
+import numpy as np
 
 
-def validate_action_name(action: str) -> bool:
-    return action in ALLOWED_ACTIONS
-
-
-def validate_joint_targets(targets, lower_limits, upper_limits) -> None:
-    if not (len(targets) == len(lower_limits) == len(upper_limits)):
-        raise ValueError("Joint target and limit dimensions do not match.")
-    for i, (value, low, high) in enumerate(zip(targets, lower_limits, upper_limits)):
-        if not low <= value <= high:
-            raise ValueError(f"Joint target {i} is outside configured limits.")
+def validate_joint_targets(targets, lower, upper, *, max_delta=3.5):
+    targets = np.asarray(targets, dtype=float)
+    lower = np.asarray(lower, dtype=float)
+    upper = np.asarray(upper, dtype=float)
+    if targets.shape != lower.shape or targets.shape != upper.shape:
+        raise ValueError("Joint target shape mismatch.")
+    if not np.all(np.isfinite(targets)):
+        raise ValueError("Joint targets must be finite.")
+    if np.any(targets < lower) or np.any(targets > upper):
+        raise ValueError("Joint target violates joint limits.")
+    if targets.size > 1 and np.any(np.abs(np.diff(targets)) > max_delta):
+        raise ValueError("Adjacent joint target jump exceeds safety bound.")
+    return targets

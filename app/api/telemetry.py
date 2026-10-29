@@ -1,48 +1,37 @@
-"""Live telemetry backed by the current MuJoCo environment and task store."""
+"""Telemetry endpoint compatible with the current per-task simulation lifecycle."""
 
 from fastapi import APIRouter
 
-from app.api.tasks import _tasks, _tasks_lock, environment
+from app.api.tasks import _lock, _tasks
 from app.config import settings
 
 router = APIRouter(tags=["telemetry"])
 
 
-@router.get("")
+@router.get("/telemetry")
 def get_telemetry():
-    observation = environment.observation()
-    with _tasks_lock:
+    with _lock:
+        rows = list(_tasks.values())
         active = next(
-            (
-                t
-                for t in reversed(list(_tasks.values()))
-                if t["status"] in {"queued", "running"}
-            ),
-            None,
+            (t for t in reversed(rows) if t["status"] in {"queued", "running"}), None
         )
-        recent_events = [
+        events = [
             {
                 "task_id": t["task_id"],
                 "status": t["status"],
                 "message": t["message"],
                 "created_at": t["created_at"],
             }
-            for t in list(_tasks.values())[-10:]
+            for t in rows[-10:]
         ]
     return {
-        "simulation": {
-            "connected": observation.get("connected", False),
-            "time": observation.get("time", 0.0),
-        },
+        "simulation": {"connected": bool(active), "time": 0.0},
         "robot": {
             "name": settings.robot_name,
-            "state": (
-                "running"
-                if active
-                else ("ready" if observation.get("connected") else "not_connected")
-            ),
+            "state": "running" if active else "idle",
         },
         "current_action": active["message"] if active else None,
-        "observation": observation,
-        "events": recent_events,
+        "observation": None,
+        "events": events,
+        "note": "Each task owns its own simulation session; no persistent viewer is attached.",
     }

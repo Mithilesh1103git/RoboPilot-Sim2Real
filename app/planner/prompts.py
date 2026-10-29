@@ -1,35 +1,28 @@
-"""Prompt templates for constrained high-level task planning."""
+"""Constrained planner prompts. No low-level motor commands are allowed."""
 
 import json
 
-SYSTEM_PROMPT = """You are a high-level planner for a simulated robot arm.
-Return only a JSON object matching this schema:
-{
-  "task": "pick_and_place",
-  "target_object": "object name",
-  "destination": "destination name",
-  "steps": [
-    {"action": "approach_object|grasp_object|lift_object|move_to_destination|release_object|verify",
-     "target_object": "optional name", "destination": "optional name", "rationale": "short string"}
-  ],
-  "recovery": "reobserve_and_replan|stop_safely"
-}
-Do not output joint angles, motor commands, velocities, or arbitrary code.
-Use only the listed action names. If the scene does not support the request, choose stop_safely.
-"""
+SYSTEM_PROMPT = """You are the high-level planner for a simulated Franka Panda robot.
+Return only a JSON object with keys task, target_object, destination, steps, recovery.
+task must be pick_and_place; target_object must be red_block; destination must be blue_tray.
+steps must contain, in this exact order: approach_object, grasp_object, lift_object, move_to_destination, release_object, verify.
+Each step has action, optional target_object, optional destination, and short rationale.
+recovery must be stop_safely.
+Do not output joint angles, motor commands, velocities, arbitrary coordinates, code, or unlisted actions.
+The backend validates the plan and executes a bounded controller. The simulator, not you, decides whether the task succeeded."""
 
 
-def build_planner_messages(instruction: str, observation: dict) -> list[dict[str, str]]:
-    user_content = {
+def build_planner_messages(instruction, observation):
+    user = {
         "instruction": instruction,
-        "observation": observation,
+        "scene_observation": observation,
         "constraints": [
+            "Use only supported scene entities.",
             "Plan high-level actions only.",
-            "The backend validates all actions before execution.",
-            "Never assume the task succeeded without verification.",
+            "Never claim success without simulator verification.",
         ],
     }
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": json.dumps(user_content)},
+        {"role": "user", "content": json.dumps(user, separators=(",", ":"))},
     ]

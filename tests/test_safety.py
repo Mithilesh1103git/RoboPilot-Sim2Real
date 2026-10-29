@@ -1,18 +1,18 @@
-from app.control.safety import validate_action_name, validate_joint_targets
+import numpy as np
+import pytest
+
+from app.control.safety import validate_joint_targets
 
 
-def test_action_allowlist():
-    assert validate_action_name("grasp_object")
-    assert not validate_action_name("run_arbitrary_code")
+def test_safe_joint_target():
+    assert np.allclose(validate_joint_targets([0.1, 0.2], [-1, -1], [1, 1]), [0.1, 0.2])
 
 
-def test_joint_limits_accept_valid_targets():
-    validate_joint_targets([0.0, 0.5], [-1.0, -1.0], [1.0, 1.0])
+def test_rejects_nan():
+    with pytest.raises(ValueError):
+        validate_joint_targets([float("nan")], [-1], [1])
 
 
-def test_joint_limits_reject_invalid_targets():
-    try:
-        validate_joint_targets([2.0], [-1.0], [1.0])
-    except ValueError:
-        return
-    raise AssertionError("Expected out-of-range joint target to fail")
+def test_rejects_limit_violation():
+    with pytest.raises(ValueError):
+        validate_joint_targets([2], [-1], [1])

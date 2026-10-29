@@ -1,56 +1,60 @@
-"""FastAPI application entry point for RoboPilot-Sim2Real.
-
-Configuration is read from the process environment. This module deliberately
-leaves `.env` loading to the caller so local secrets/config files are not read
-implicitly and planner credentials are never required for this baseline.
-"""
+"""FastAPI entrypoint."""
 
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.datasets import router as datasets_router
-from app.api.tasks import environment
 from app.api.tasks import router as tasks_router
 from app.api.telemetry import router as telemetry_router
 from app.config import settings
+from app.schemas import HealthStatus
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.0.0",
-    description="Simulation-first robotics manipulation baseline with deterministic Panda control.",
+    version="2.0.0",
+    description="Planner-in-the-loop simulation-first robot manipulation.",
 )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.allow_origins),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
-app.include_router(tasks_router, prefix="/api/v1")
-app.include_router(telemetry_router, prefix="/api/v1/telemetry")
-app.include_router(datasets_router, prefix="/api/v1")
+app.include_router(tasks_router)
+app.include_router(datasets_router)
+app.include_router(telemetry_router)
 
 
-@app.get("/health")
+@app.get("/health", response_model=HealthStatus, tags=["system"])
 def health():
-    return {
-        "status": "ok",
-        "project": settings.app_name,
-        "simulation_connected": environment.model is not None
-        and environment.data is not None,
-        "robot": settings.robot_name,
-    }
+    return HealthStatus(
+        status="ok",
+        project=settings.app_name,
+        planner_configured=bool(settings.nebius_api_key and settings.nebius_model),
+    )
+
+
+_WEB_DIR = Path(__file__).resolve().parents[1] / "web"
+if _WEB_DIR.is_dir():
+    app.mount("/web", StaticFiles(directory=str(_WEB_DIR)), name="web")
 
 
 @app.get("/", include_in_schema=False)
-def root():
-    return RedirectResponse(url="/web/", status_code=307)
+def web_home():
+    index = _WEB_DIR / "index.html"
+    if index.is_file():
+        return FileResponse(index)
+    return {"project": settings.app_name, "docs": "/docs", "health": "/health"}
 
 
-web_dir = Path(__file__).resolve().parents[1] / "web"
-if web_dir.is_dir():
-    app.mount("/web", StaticFiles(directory=str(web_dir), html=True), name="web")
+@app.post("/simulation/reset", tags=["simulation"])
+def reset_simulation():
+    return {
+        "status": "not_connected",
+        "message": "No persistent simulation is attached. Each task creates and resets its own simulation session.",
+    }

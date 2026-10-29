@@ -1,0 +1,49 @@
+<mujoco model="franka_panda_scene">
+  <compiler angle="radian" meshdir="assets"/>
+
+  <!-- Include the raw robot model -->
+  <include file="panda.xml"/>
+
+  <!-- Global Environment Configurations -->
+  <statistic center="0 0 0.5" extent="1.2"/>
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <!-- FIX: Configured background color natively via visual option flags -->
+    <global offwidth="640" offheight="480"/>
+  </visual>
+
+  <!-- World Elements -->
+  <worldbody>
+    <!-- Floor Grid -->
+    <geom name="floor" type="plane" size="0 0 0.05" rgba="0.8 0.8 0.8 1"/>
+
+    <!-- Light Source -->
+    <light pos="0 0 3" dir="0 0 -1" directional="false"/>
+
+    <!-- 1. THE TABLE -->
+    <!-- Positioned directly under and slightly ahead of the robot base -->
+    <body name="table" pos="0.4 0 0">
+      <geom name="table_top" type="box" size="0.4 0.6 0.4" rgba="0.4 0.25 0.15 1"/>
+    </body>
+
+    <!-- 2. THE TRAY -->
+    <!-- Resting flat on top of the table surface (z = table_height + tray_half_height) -->
+    <body name="tray" pos="0.4 0 0.405">
+      <freejoint name="tray_joint"/> <!-- Allows the tray to be pushed/moved realistically -->
+      <!-- Tray Floor -->
+      <geom name="tray_bottom" type="box" size="0.2 0.3 0.005" rgba="0.7 0.7 0.7 1" mass="0.3"/>
+      <!-- Tray Outer Rims (Collision Barriers) -->
+      <geom name="tray_rim_n" type="box" pos="0.2 0 0.015" size="0.005 0.3 0.015" rgba="0.6 0.6 0.6 1"/>
+      <geom name="tray_rim_s" type="box" pos="-0.2 0 0.015" size="0.005 0.3 0.015" rgba="0.6 0.6 0.6 1"/>
+      <geom name="tray_rim_e" type="box" pos="0 0.3 0.015" size="0.2 0.005 0.015" rgba="0.6 0.6 0.6 1"/>
+      <geom name="tray_rim_w" type="box" pos="0 -0.3 0.015" size="0.2 0.005 0.015" rgba="0.6 0.6 0.6 1"/>
+    </body>
+
+    <!-- 3. THE GLASS -->
+    <!-- Modeled as a transparent cylinder resting inside the tray -->
+    <body name="glass" pos="0.4 0 0.47">
+      <freejoint name="glass_joint"/> <!-- Allows the glass to be picked up or knocked over -->
+      <geom name="glass_cylinder" type="cylinder" size="0.03 0.06" rgba="0.7 0.9 1.0 0.4" mass="0.1" condim="4"/>
+    </body>
+  </worldbody>
+</mujoco>

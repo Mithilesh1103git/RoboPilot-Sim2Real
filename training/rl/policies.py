@@ -1,10 +1,11 @@
-from stable_baselines3 import PPO, SAC
+"""Stable-Baselines3 policy factory."""
 
 
 def build_model(algorithm, env, seed=7, device="auto"):
-    algorithm = algorithm.upper()
+    from stable_baselines3 import PPO, SAC
+
     if algorithm == "PPO":
         return PPO("MlpPolicy", env, seed=seed, device=device, verbose=1)
     if algorithm == "SAC":
         return SAC("MlpPolicy", env, seed=seed, device=device, verbose=1)
-    raise ValueError("Supported algorithms: PPO, SAC")
+    raise ValueError(f"Unsupported algorithm: {algorithm}")

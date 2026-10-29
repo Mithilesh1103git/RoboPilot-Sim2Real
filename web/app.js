@@ -35,7 +35,7 @@ async function pollTask(taskId) {
   activeTasks.add(taskId);
   try {
     while (true) {
-      const response = await fetch(`/api/v1/tasks/${encodeURIComponent(taskId)}`, { cache: 'no-store' });
+      const response = await fetch(`/tasks/${encodeURIComponent(taskId)}`, { cache: 'no-store' });
       const task = await readResponse(response);
       setMessage(`Task ${task.status}: ${task.message || task.task_id}`);
       if (terminalStates.has(task.status)) {
@@ -68,10 +68,10 @@ byId('runTask')?.addEventListener('click', async () => {
   const button = byId('runTask');
   button.disabled = true;
   try {
-    const response = await fetch('/api/v1/tasks', {
+    const response = await fetch('/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instruction, scenario: byId('scenario')?.value || 'default' }),
+      body: JSON.stringify({ instruction, scenario: 'panda_pick_place' }),
     });
     const task = await readResponse(response);
     setMessage(`Task ${task.status}: ${task.message || 'Task accepted.'}`);
@@ -89,7 +89,7 @@ byId('resetSim')?.addEventListener('click', async () => {
   const button = byId('resetSim');
   button.disabled = true;
   try {
-    const response = await fetch('/api/v1/simulation/reset', { method: 'POST' });
+    const response = await fetch('/simulation/reset', { method: 'POST' });
     const data = await readResponse(response);
     setMessage(data.message || 'Simulation reset.');
     addEvent(`Simulation reset: ${data.status || 'ok'}`);

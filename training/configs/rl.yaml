@@ -1,1 +1,9 @@
-env_id: Pendulum-v1 # Replace with registered RoboPilot task\nalgorithm: PPO\ntimesteps: 100000\nseed: 7\ndevice: auto\noutput: training/rl/checkpoints/robopilot_policy\n
+environment:
+  id: RoboPilotPandaPickPlace-v0
+  seed: 7
+  episode_steps: 250
+training:
+  algorithm: PPO
+  total_timesteps: 50000
+  device: auto
+  output_dir: training/runs
