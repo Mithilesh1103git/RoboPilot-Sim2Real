@@ -1,6 +1,6 @@
 # RoboPilot-Sim2Real
 
-![RoboPilot-Sim2Real-logo-artwork]https://github.com/Mithilesh1103git/RoboPilot-Sim2Real/blob/main/assets/images/RoboPilot-Sim2Real-logo-artwork.png
+![RoboPilot-Sim2Real-logo-artwork](https://github.com/Mithilesh1103git/RoboPilot-Sim2Real/blob/main/assets/images/RoboPilot-Sim2Real-logo-artwork.png?raw=true)
 
 **Simulation-first robot manipulation with a planner-in-the-loop agent,
 MuJoCo-grounded execution, and an independent reinforcement-learning
