@@ -1,5 +1,7 @@
 # RoboPilot-Sim2Real
 
+![project_logo_artwork]assets/images/RoboPilot-Sim2Real-logo-artwork.png
+
 **Simulation-first robot manipulation with a planner-in-the-loop agent,
 MuJoCo-grounded execution, and an independent reinforcement-learning
 research pipeline.**

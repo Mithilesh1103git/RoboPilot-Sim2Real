@@ -1,255 +1,185 @@
 # RoboPilot-Sim2Real
 
-**Simulation-first robot manipulation with a planner-in-the-loop runtime
-agent and a fully independent reinforcement-learning project.**
+![project_logo_artwork]assets/images/RoboPilot-Sim2Real-logo-artwork.png
 
-RoboPilot-Sim2Real combines a high-level LLM planner, a validated
-robot-task plan, bounded motion primitives, a MuJoCo simulation, and
-simulator-grounded verification. A separate `training/` project provides
-RL training and evaluation without importing or calling the runtime
-application.
+**Simulation-first robot manipulation with a planner-in-the-loop agent,
+MuJoCo-grounded execution, and an independent reinforcement-learning
+research pipeline.**
 
-> **Current development status:** The runtime can load the Franka Panda
-> simulation, obtain a scene observation, call Nebius Nemotron, and
-> validate the returned pick-and-place plan. End-to-end pick-and-place
-> is not yet verified: the current Panda controller has reported
-> `PrimitiveError: Joint trajectory did not converge`. Treat the
-> controller and task execution as active development, not as a
-> demonstrated successful manipulation pipeline.
+RoboPilot-Sim2Real explores how a language-conditioned agent can
+translate a natural-language manipulation request into a constrained
+sequence of robot actions, execute those actions in a physics simulator,
+and verify the resulting state. A separate training application develops
+and evaluates policies using simulator-generated experience without
+depending on the language-model runtime.
+
+> **Project status:** Active research prototype. The runtime, browser
+> UI, training application, and robot-profile system are under
+> development. Check the running API's `/docs` page for the routes
+> actually registered by your checkout. Do not assume that older route
+> examples or a particular API prefix match the current backend.
+
+------------------------------------------------------------------------
 
 ## Contents
 
--   [Architecture and boundaries](#architecture-and-boundaries)
--   [Runtime behavior](#runtime-behavior)
--   [Requirements](#requirements)
--   [Installation](#installation)
--   [Configuration](#configuration)
--   [Run the runtime application](#run-the-runtime-application)
--   [Submit and monitor a task](#submit-and-monitor-a-task)
--   [Planner contract and validation](#planner-contract-and-validation)
+-   [Project goals](#project-goals)
+-   [System overview](#system-overview)
+-   [Runtime architecture](#runtime-architecture)
+-   [Simulation and browser viewport](#simulation-and-browser-viewport)
 -   [Independent training
-    application](#independent-training-application)
--   [Custom robot profiles](#custom-robot-profiles)
--   [Troubleshooting](#troubleshooting)
--   [Testing and safety limitations](#testing-and-safety-limitations)
+    architecture](#independent-training-architecture)
+-   [Repository layout](#repository-layout)
+-   [Requirements](#requirements)
+-   [Runtime setup](#runtime-setup)
+-   [Training setup](#training-setup)
+-   [Configuration](#configuration)
+-   [Robot profiles](#robot-profiles)
+-   [API discovery and
+    troubleshooting](#api-discovery-and-troubleshooting)
+-   [Testing](#testing)
+-   [Current scope and limitations](#current-scope-and-limitations)
+-   [Safety](#safety)
+-   [Research direction](#research-direction)
 
-## Architecture and boundaries
+------------------------------------------------------------------------
 
-### Runtime: `app/`
+## Project goals
 
-The runtime task flow is:
+RoboPilot-Sim2Real is organized around four goals:
 
-1.  Receive a manipulation instruction through the API.
-2.  Load the selected robot profile and current MuJoCo observation.
-3.  Ask Nebius Nemotron for a **high-level task plan**.
-4.  Parse and validate the JSON plan, including supported action names,
-    task entities, action order, and recovery policy.
-5.  Execute bounded, robot-specific motion primitives.
-6.  Check task outcome against simulator state.
-7.  Apply bounded recovery when configured; stop safely when recovery is
-    exhausted.
+1.  **Ground language-conditioned planning in a simulator.** A
+    Nebius-hosted Nemotron model proposes a high-level task plan from
+    the user's instruction and the current task context.
+2.  **Keep execution deterministic and bounded.** The planner does not
+    issue low-level motor commands. Application code validates the plan
+    and maps supported actions to bounded control primitives.
+3.  **Verify outcomes against simulation state.** Execution should be
+    assessed using simulator observations and task conditions rather
+    than treating a generated plan as proof of success.
+4.  **Develop policies independently of LLMs.** The training project
+    uses simulator-driven data, scripted/teacher behavior, reinforcement
+    learning, and evaluation. It does not use an LLM to generate
+    training instructions, labels, demonstrations, rewards, or policy
+    updates.
 
-The planner proposes intent only. It must not supply joint angles,
-velocities, motor commands, executable code, or arbitrary control
-coordinates. The backend/controller remains responsible for translating
-validated actions into robot motion.
+The current reference manipulation task is pick-and-place: move a
+configured object (by default `red_block`) into a configured destination
+(by default `blue_tray`).
 
-### Training: `training/`
-
-`training/` is a separate application with its own MuJoCo assets,
-Gymnasium environment, data pipeline, RL training jobs, evaluation, and
-checkpoints.
-
-The separation is intentional:
-
--   Training does **not** import `app/`.
--   Training does **not** call the runtime API or depend on runtime
-    processes.
--   Runtime and training maintain separate robot asset copies.
--   Artifact exchange is explicit; policies and checkpoints are not
-    silently shared.
--   The project architecture does not use an LLM to generate training
-    labels, demonstrations, rewards, or policy-learning data.
-
-## Runtime behavior
-
-The default/reference robot is the **Franka Emika Panda**. Robot
-selection is profile-driven. The built-in manipulation scenario is
-pick-and-place, with `red_block` as the default object and `blue_tray`
-as the destination.
-
-The generic runtime controller currently targets compatible MuJoCo
-manipulators with position-controlled scalar arm joints and configured
-gripper actuators. A robot with torque/velocity control, a mobile base,
-bimanual control, or unusual gripper semantics may require a
-robot-specific controller adapter.
-
-A valid LLM plan is not proof that a trajectory is reachable or that a
-manipulation succeeded. Only simulator-grounded verification can
-establish task success.
-
-## Requirements
-
--   Python 3.12 is the documented development target.
--   Dependencies from `requirements.txt`.
--   A Nebius Token Factory API key and an enabled model ID.
--   Compatible MuJoCo MJCF and mesh/texture assets for the selected
-    robot.
--   For the training application, install
-    `training/requirements-training.txt` in a separate environment.
-
-## Installation
-
-### Windows PowerShell
-
-From the repository root:
-
-``` powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-Copy-Item .env.example .env
-```
-
-Edit `.env` as described in [Configuration](#configuration), then start
-the runtime:
-
-``` powershell
-uvicorn app.main:app --reload
-```
-
-### Linux/macOS
-
-Create and activate a Python 3.12 virtual environment, install
-`requirements.txt`, copy `.env.example` to `.env`, configure the
-environment variables, and run:
-
-``` bash
-uvicorn app.main:app --reload
-```
-
-The repository-root `main.py` is also a convenience launcher.
-
-## Configuration
-
-Configuration is loaded by `app/config.py` from environment variables
-and the project `.env` file.
-
-  -----------------------------------------------------------------------
-  Variable                            Purpose
-  ----------------------------------- -----------------------------------
-  `NEBIUS_API_KEY`                    Nebius Token Factory API key. Keep
-                                      it private; do not commit it.
-
-  `NEBIUS_BASE_URL`                   OpenAI-compatible Nebius API base
-                                      URL.
-
-  `NEBIUS_MODEL`                      Enabled model ID to request.
-
-  `NEBIUS_TIMEOUT_SECONDS`            API request timeout; the current
-                                      settings code enforces a minimum of
-                                      5 seconds and defaults to 45
-                                      seconds.
-
-  `NEBIUS_TEMPERATURE`                Planner sampling temperature;
-                                      clamped to the range 0--1.
-
-  `ROBOT_NAME`                        Default runtime robot profile ID.
-
-  `ROBOPILOT_ASSETS_DIR`              Runtime robot asset root; defaults
-                                      to `assets/robots/`.
-
-  `ROBOPILOT_DATA_DIR`                Runtime data-adapter directory;
-                                      defaults to `data/adapter/`.
-
-  `SIMULATION_HEADLESS`               Headless simulation setting.
-
-  `SIMULATION_REALTIME`               Whether simulation stepping
-                                      attempts to run in real time.
-
-  `MAX_RECOVERY_RETRIES`              Bounded recovery retry setting,
-                                      clamped by the current settings
-                                      code to 0--3.
-
-  `TASK_WORKERS`                      Runtime task worker count, clamped
-                                      by the current settings code to
-                                      1--4.
-
-  `CORS_ALLOW_ORIGINS`                Comma-separated allowed browser
-                                      origins.
-  -----------------------------------------------------------------------
-
-Example Nebius configuration:
-
-``` dotenv
-NEBIUS_API_KEY=replace_with_your_key
-NEBIUS_BASE_URL=https://api.tokenfactory.eu-north1.nebius.com/v1/
-NEBIUS_MODEL=nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B
-NEBIUS_TIMEOUT_SECONDS=120
-NEBIUS_TEMPERATURE=0.1
-ROBOT_NAME=franka_panda
-```
-
-Use a base URL and model ID enabled for your Nebius account. The
-regional URL and model above match the standalone request that was
-successfully tested during development; confirm they remain valid for
-your account. Do not put a real API key in source control, issue
-reports, screenshots, or README commits.
-
-Environment-backed settings are initialized when the Python module is
-imported. **Restart the application after changing `.env`.**
-
-## Run the runtime application
-
-Start the server:
-
-``` bash
-uvicorn app.main:app --reload
-```
-
-Open:
-
--   Web UI: `http://127.0.0.1:8000/`
--   API documentation: `http://127.0.0.1:8000/docs`
-
-## Submit and monitor a task
-
-Submit a pick-and-place task:
-
-``` bash
-curl -X POST http://127.0.0.1:8000/tasks \
-  -H "Content-Type: application/json" \
-  -d "{\"instruction\":\"Pick up the red block and place it in the blue tray\"}"
-```
-
-The API returns a task ID. Poll its status:
+## System overview
 
 ``` text
-GET /tasks/{task_id}
+                         RUNTIME APPLICATION
+                         ====================
+
+ User instruction
+       |
+       v
+ Browser UI -----> FastAPI runtime API
+                         |
+                         v
+                 Task / observation
+                         |
+                         v
+                 Nebius Nemotron
+                 high-level planner
+                         |
+                         v
+                 Strict plan parsing
+                 and validation
+                         |
+                         v
+                 Bounded motion primitives
+                         |
+                         v
+                   MuJoCo physics
+                         |
+                         v
+               State-based verification
+                         |
+                  +------+------+
+                  |             |
+                Success     Bounded recovery
+                                |
+                            Safe stop
+
+
+                    INDEPENDENT TRAINING
+                    ====================
+
+       MuJoCo training assets + robot profile
+                         |
+                         v
+             Profile-driven Gymnasium env
+                         |
+             +-----------+------------+
+             |                        |
+       Scripted / teacher       Simulator-generated
+          behavior                 transitions
+             |                        |
+             +-----------+------------+
+                         |
+                         v
+                 Replay / datasets
+                         |
+                         v
+                RL policy training
+                    (e.g. PPO/SAC)
+                         |
+                         v
+                 Policy evaluation
+
+        World-model training and evaluation are
+        a separate training workstream. The intended
+        information flow is world model -> RL, not
+        an LLM-driven training loop.
 ```
 
-Request cooperative cancellation:
+The runtime and training application are deliberately separate. They may
+use corresponding robot profiles and compatible MuJoCo models, but the
+training project must not import the runtime package, call runtime
+endpoints, or depend on runtime processes or runtime-generated
+artifacts.
 
-``` text
-POST /tasks/{task_id}/stop
-```
+## Runtime architecture
 
-Use the API documentation at `/docs` to confirm request and response
-schemas for the checked-out version. Task state is currently in memory
-and is lost when the runtime process restarts.
+The runtime follows this control flow:
 
-## Planner contract and validation
+1.  **API layer** accepts a task request and manages task execution.
+2.  **Observation layer** obtains the relevant state from the
+    simulation.
+3.  **Planner** calls Nemotron through the Nebius OpenAI-compatible API.
+4.  **Plan validation** parses the model response into the application's
+    typed plan schema and rejects unsupported tasks, actions, targets,
+    destinations, or recovery behavior.
+5.  **Motion primitives** execute the supported action sequence through
+    application-controlled robot commands.
+6.  **MuJoCo simulation** advances the configured robot and task scene.
+7.  **Verification** checks the simulator-grounded result.
+8.  **Recovery** is bounded. If the supported operation cannot safely
+    continue, the runtime stops rather than improvising arbitrary
+    low-level commands.
 
-The planner returns a JSON object with these top-level fields:
+### Planner boundary
 
--   `task`: `pick_and_place`
--   `target_object`: the configured object name
--   `destination`: the configured destination name
--   `steps`: the six supported actions in order
--   `recovery`: `stop_safely`
+The language model is a high-level planner---not a controller.
 
-The required action order is:
+It must not provide or directly execute:
+
+-   Joint positions or joint trajectories.
+-   Joint velocities or torques.
+-   Arbitrary Python code or shell commands.
+-   Direct actuator or motor commands.
+-   Unvalidated action names, targets, or destinations.
+
+The application owns validation, control limits, simulator interaction,
+verification, and recovery.
+
+### Current task scope
+
+The documented built-in task is profile-configured pick-and-place. The
+validated action sequence currently represented in the runtime includes:
 
 1.  `approach_object`
 2.  `grasp_object`
@@ -258,22 +188,213 @@ The required action order is:
 5.  `release_object`
 6.  `verify`
 
-Relevant steps must reference the configured object and destination. In
-particular, `move_to_destination`, `release_object`, and `verify` must
-reference the destination. The parser can normalize known short aliases
-such as `approach`, `grasp`, `lift`, `move`, and `release` to the
-canonical action names, but this does not replace schema and sequence
-validation.
+This is not a claim of general-purpose manipulation. Additional tasks
+require corresponding scene definitions, schemas, validation rules,
+control primitives, and success criteria.
 
-The LLM plan is untrusted input. Keep backend validation strict. Do not
-treat a well-formed plan as evidence that the robot can reach a target
-or complete the task.
+## Simulation and browser viewport
 
-## Independent training application
+MuJoCo is the physics and simulation foundation. The runtime environment
+loads a robot model from its profile, constructs the task scene, and
+advances the simulation.
 
-Install training dependencies in a separate environment:
+The browser UI is a vanilla HTML/CSS/JavaScript application served by
+the runtime API. The current `RoboPilot.html` contains a **MuJoCo
+viewport placeholder**. A live browser-rendered viewport requires an
+additional rendering/streaming integration; it should not be considered
+operational merely because the placeholder is visible.
+
+### Planned browser rendering options
+
+Two suitable implementation paths are:
+
+-   **Backend-rendered frames:** render the MuJoCo scene in Python and
+    stream image frames to the browser, for example over a WebSocket.
+    This most directly displays the simulator's rendered camera view.
+-   **Browser-side 3D rendering:** send simulation state (such as joint
+    positions) to a Three.js scene. This supports interactive orbit,
+    pan, and zoom, but requires a synchronized visual model and scene
+    representation.
+
+Whichever renderer is selected, MuJoCo remains authoritative for physics
+and task state. A browser visualization must not become a second physics
+engine or be treated as proof that the simulated task succeeded.
+
+## Independent training architecture
+
+`training/` is a standalone application for simulator-driven policy
+development and evaluation.
+
+### Independence contract
+
+The training project:
+
+-   Has its own MuJoCo assets and robot asset copies.
+-   Has its own profile-driven Gymnasium environment and training code.
+-   Runs as a separate FastAPI application and dashboard.
+-   Does not import `app/`.
+-   Does not call the runtime API.
+-   Does not depend on runtime processes, runtime task state, or runtime
+    artifacts.
+-   Does not use an LLM for training data generation, labels,
+    demonstrations, rewards, or policy learning.
+
+### Training workflow
+
+The training application is intended to support:
+
+-   Simulator-driven transition collection.
+-   Scripted or teacher-policy behavior for data generation.
+-   RL training, including PPO/SAC workflows exposed by the training
+    application.
+-   Checkpoint evaluation and measured performance reporting.
+-   World-model training and inspection as a distinct workstream.
+-   Job logs and explicit artifact import/export operations where
+    supported by the dashboard and CLI.
+
+The intended research direction keeps the world-model-to-RL information
+flow unidirectional. Training results must be evaluated empirically; the
+existence of a checkpoint does not imply that a policy is successful,
+safe, or transferable.
+
+For training-specific commands, API details, and limitations, see
+[`training/README.md`](training/README.md).
+
+## Repository layout
+
+The following is a **conceptual map of the documented components**, not
+a guarantee that every optional file is present in every checkout. Use
+your working tree as the source of truth.
+
+``` text
+RoboPilot-Sim2Real/
+├── app/                         # Runtime FastAPI application
+│   ├── api/                     # Runtime API routers
+│   ├── control/                 # Bounded motion primitives
+│   ├── planner/                 # Nebius / Nemotron planner integration
+│   ├── robots/                  # Runtime robot-profile loading
+│   ├── simulation/              # MuJoCo runtime environment
+│   ├── config.py                # Environment-backed runtime settings
+│   ├── schemas.py               # Request and plan schemas
+│   └── main.py                  # Runtime FastAPI app
+├── assets/
+│   └── robots/                  # Runtime MJCF and referenced assets
+├── configs/
+│   └── robots/                  # Robot profile JSON and template
+├── web/
+│   ├── RoboPilot.html           # Runtime browser UI
+│   ├── styles.css
+│   └── app.js
+├── training/                    # Independent training application
+│   ├── assets/                  # Separate training robot assets
+│   ├── robots/                  # Training-side profile utilities
+│   ├── ...                      # Environment, data, RL, evaluation, API, UI
+│   ├── main.py                  # Training FastAPI app
+│   └── README.md
+├── tests/                       # Runtime and project tests
+├── .env.example                 # Runtime configuration template
+├── requirements.txt             # Runtime dependencies
+└── README.md
+```
+
+Do not collapse the runtime and training directories into one import
+graph. In particular, do not make `training/` import modules from `app/`
+for convenience.
+
+## Requirements
+
+-   Python 3.12 is the documented development baseline.
+-   MuJoCo Python package (`mujoco`) and compatible robot MJCF assets.
+-   FastAPI and Uvicorn for the applications.
+-   A Nebius API key and a supported Nemotron model identifier for
+    runtime planning.
+-   Training dependencies from `training/requirements-training.txt` for
+    the independent training application.
+-   A compatible OS, Python environment, and graphics/rendering setup
+    for the selected MuJoCo rendering mode.
+
+The exact dependency set is defined by the repository's requirements
+files. Install training dependencies separately from runtime
+dependencies.
+
+## Runtime setup
+
+### 1. Create a virtual environment
+
+**Windows PowerShell**
+
+``` powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**Linux / macOS**
 
 ``` bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 2. Configure environment variables
+
+Copy the template:
+
+**PowerShell**
+
+``` powershell
+Copy-Item .env.example .env
+```
+
+**Linux / macOS**
+
+``` bash
+cp .env.example .env
+```
+
+Set at least the runtime planner credentials and model:
+
+``` dotenv
+NEBIUS_API_KEY=your_nebius_api_key
+NEBIUS_MODEL=your_supported_nemotron_model
+```
+
+Do not commit `.env` or expose API credentials in browser JavaScript,
+source control, screenshots, or logs.
+
+### 3. Start the runtime API
+
+From the repository root, with the virtual environment activated:
+
+``` bash
+uvicorn app.main:app --reload
+```
+
+The default local address is:
+
+-   Runtime base URL: `http://127.0.0.1:8000`
+-   Interactive API documentation, if enabled:
+    `http://127.0.0.1:8000/docs`
+-   OpenAPI schema, if enabled: `http://127.0.0.1:8000/openapi.json`
+
+The UI is expected to be served by the runtime application when its
+static-file and root-page routes are configured. If `/` returns 404, the
+root page is not registered in the application currently running; verify
+the entry point and route table rather than assuming the HTML file is
+automatically served.
+
+## Training setup
+
+The training service runs separately from the runtime service.
+
+Install its dependencies in a separate environment (recommended) or
+otherwise keep its dependency installation isolated:
+
+``` bash
+python -m pip install --upgrade pip
 pip install -r training/requirements-training.txt
 ```
 
@@ -283,148 +404,287 @@ Start the training application from the repository root:
 uvicorn training.main:app --host 127.0.0.1 --port 8010 --reload
 ```
 
-Open:
+Expected local addresses, when the relevant routes are enabled:
 
 -   Training dashboard: `http://127.0.0.1:8010/`
 -   Training API documentation: `http://127.0.0.1:8010/docs`
 
-The dashboard supports the training workflows implemented in the current
-checkout, including PPO/SAC training, simulator-generated transition
-collection, checkpoint evaluation, world-model training, log inspection,
-and explicit artifact import/download. CLI scripts remain available for
-automation. See [`training/README.md`](training/README.md) for the
-training API, commands, and operational details.
+The training dashboard and runtime UI are separate applications.
+Starting one does not start the other.
 
-The training environment is a profile-selected, joint-target MuJoCo
-manipulation environment; Panda is the reference profile. Evaluate
-checkpoints using measured results. A trained policy is robot-specific
-and must not be assumed to work on a different profile.
+## Configuration
 
-## Custom robot profiles
+Runtime settings are environment-backed. The current configuration
+includes:
+
+  -----------------------------------------------------------------------
+  Variable                            Purpose
+  ----------------------------------- -----------------------------------
+  `APP_NAME`                          Runtime application name
+
+  `ROBOT_NAME`                        Default runtime robot profile;
+                                      defaults to `panda`
+
+  `ROBOPILOT_ASSETS_DIR`              Runtime robot asset root
+
+  `ROBOPILOT_DATA_DIR`                Runtime adapter/data directory
+
+  `NEBIUS_API_KEY`                    Nebius API credential
+
+  `NEBIUS_BASE_URL`                   Nebius OpenAI-compatible API base
+                                      URL
+
+  `NEBIUS_MODEL`                      Model identifier used by the
+                                      planner
+
+  `NEBIUS_TIMEOUT_SECONDS`            Planner request timeout
+
+  `NEBIUS_TEMPERATURE`                Planner sampling temperature
+
+  `SIMULATION_HEADLESS`               Runtime headless-simulation setting
+
+  `SIMULATION_REALTIME`               Whether runtime simulation is paced
+                                      in real time
+
+  `MAX_STEP_RETRIES`                  Per-step retry limit where used by
+                                      the runtime
+
+  `MAX_RECOVERY_RETRIES`              Bounded recovery retry limit
+
+  `TASK_WORKERS`                      Runtime task worker limit
+
+  `CORS_ALLOW_ORIGINS`                Comma-separated allowed browser
+                                      origins
+  -----------------------------------------------------------------------
+
+Use `.env.example` as the authoritative list of variables for the exact
+checkout. Do not assume a setting is active merely because it appears in
+this table; configuration behavior is determined by the checked-out
+code.
+
+## Robot profiles
+
+Robot selection is profile-driven. The runtime profile directory is:
+
+``` text
+configs/robots/
+```
+
+The runtime asset root defaults to:
+
+``` text
+assets/robots/
+```
+
+The independent training application uses its own robot asset root:
+
+``` text
+training/assets/robots/
+```
+
+### Adding a compatible robot
 
 1.  Copy `configs/robots/custom_robot.template.json` to
-    `configs/robots/<robot_id>.json`; the filename stem is the robot ID.
-
-2.  Configure the robot's MJCF filename, ordered scalar arm joints, safe
-    home positions, end-effector body, gripper actuator names/control
-    values, gripper reset joint positions, and task geometry/names.
-
-3.  Place the MJCF and all referenced meshes, textures, and included
-    files under `assets/robots/<asset_directory>/` for runtime.
-
-4.  Make a **separate** copy under
+    `configs/robots/<robot_id>.json`.
+2.  Configure the robot's MJCF filename and asset directory.
+3.  Define ordered scalar arm joints and safe home positions.
+4.  Define the end-effector body.
+5.  Configure gripper actuator names and control values, plus gripper
+    reset joint positions where required.
+6.  Configure task object/destination names and geometry/placement
+    parameters.
+7.  Put the MJCF and all referenced meshes, textures, includes, and
+    other model files under `assets/robots/<asset_directory>/`.
+8.  Make a separate asset copy under
     `training/assets/robots/<asset_directory>/` for training. Do not
-    make training import runtime code or depend on runtime processes.
+    point training at runtime modules or runtime process state.
+9.  Validate the training-side profile and asset path:
 
-5.  Validate the training asset path with:
+``` bash
+python -m training.robots.validate_profile --robot-name <robot_id>
+```
 
-    ``` bash
-    python -m training.robots.validate_profile --robot-name <robot_id>
-    ```
+10. Restart the relevant applications and confirm the profile is
+    discoverable in each application.
 
-6.  Restart the applications. Confirm that the robot appears in the
-    runtime UI and training dashboard dropdowns and in `GET /robots` /
-    `GET /api/robots`.
+Use the existing Panda profile as the reference implementation for the
+schema and expected fields.
 
-### Robot compatibility checklist
+### Compatibility boundaries
 
--   Confirm all joint, body, actuator, mesh, texture, and include names
-    against the actual MJCF.
--   Preserve asset directory structure when staging MJCF files. Relative
-    paths such as `meshdir="assets"` require the referenced subdirectory
-    to exist at the expected location.
--   Verify actuator control ranges and gripper semantics from the model;
-    do not assume a gripper uses a particular numeric open value.
--   Check joint limits, home positions, workspace reachability,
-    collision geometry, object/tray placement, and placement tolerances.
--   Test reset, motion, grasp, lift, release, and simulator verification
-    separately.
--   Use the same robot profile and compatible assets for training and
-    evaluation. Do not automatically deploy a checkpoint to a different
-    robot.
+The generic manipulation environment derives action and observation
+dimensions from the profile; it is not inherently limited to seven arm
+joints. However, profile-driven loading does not mean every robot is
+automatically supported.
 
-Profile-driven dimensions make the environment extensible to compatible
-manipulators, but do not guarantee every robot works without
-controller-specific adaptation.
+Each robot must be checked for:
 
-## Troubleshooting
+-   MJCF naming and include/mesh path correctness.
+-   Joint and actuator mapping.
+-   Kinematics and end-effector definition.
+-   Gripper semantics and reset behavior.
+-   Collision geometry and self-collision behavior.
+-   Workspace and task-object placement.
+-   Controller compatibility and task tolerances.
 
-### Nebius API request times out
+The documented built-in controller targets position-controlled scalar
+arm joints and configured gripper actuators. Torque-controlled or
+velocity-controlled robots, mobile bases, bimanual systems, and unusual
+grippers may require a robot-specific controller adapter.
 
-1.  Verify `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, and `NEBIUS_MODEL`.
-2.  Run a minimal standalone OpenAI-compatible request with the same
-    endpoint, model, and credentials.
-3.  Compare the standalone request with the application's actual
-    `messages`, model ID, `response_format`, timeout, and retry
-    settings.
-4.  Inspect the logged exception and request duration. Do not log the
-    API key.
-5.  Restart the runtime after changing `.env`.
+A trained checkpoint is robot- and environment-specific unless transfer
+has been explicitly implemented and evaluated. Train and evaluate
+against the same robot profile; do not automatically deploy a checkpoint
+to a different robot.
 
-A successful standalone request confirms that the endpoint can answer
-that request; it does not guarantee that the application's request
-payload or timeout policy is identical.
+## API discovery and troubleshooting
 
-### Plan fails Pydantic validation
+API paths are determined by the actual FastAPI router registrations and
+route decorators in the running checkout. A router prefix and a route
+decorator combine to form the final path. Do not add `/api/v1` in the
+frontend unless the backend registers that prefix.
 
-Check that the response is valid JSON and uses the exact supported
-action strings and order. Ensure the required `target_object` and
-`destination` values are present on the relevant steps. Keep both schema
-validation and sequence validation enabled.
+### Inspect registered routes
 
-### `PrimitiveError: Joint trajectory did not converge`
+Temporarily add this after all `include_router(...)` calls in the
+runtime application entry point:
 
-This indicates that planning/validation progressed far enough to enter
-motion execution, but a controller convergence condition failed. It is
-not an API timeout.
+``` python
+for route in app.routes:
+    methods = getattr(route, "methods", None)
+    print(f"{','.join(sorted(methods or [])):20} {route.path}")
+```
 
-Investigate the specific primitive's target, inverse-kinematics result,
-joint limits, actuator behavior, convergence tolerance, and
-iteration/time budget. Log the primitive name, target pose, starting and
-target joint values, residual/error metric, and iteration count. Do not
-simply remove the convergence check or report success after a failed
-motion.
+Restart the same Uvicorn process that serves the browser UI and inspect
+the terminal output.
 
-For the current Franka Panda development state, this error has been
-observed during pick-and-place. Successful end-to-end object placement
-has **not** yet been established by the available task logs.
+If OpenAPI is enabled, also inspect:
 
-### MuJoCo cannot find a mesh
+``` text
+http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/openapi.json
+```
 
-Check the model's `<compiler meshdir="...">`, mesh filenames,
-`<include>` paths, and the exact staged directory structure. A file
-existing in the source tree is not enough if a generated temporary scene
-resolves a different relative path.
+Use the routes shown by the running application as the source of truth
+for frontend URLs and API examples.
 
-### Robot does not move or gripper behaves unexpectedly
+### Common symptoms
 
-Verify that the profile's joint and actuator names match the loaded
-MJCF, that every arm joint has a compatible actuator, and that control
-values and gripper joint positions match the model. Confirm that the
-requested end-effector target is reachable before adjusting tolerances.
+  -----------------------------------------------------------------------
+  Symptom                             What to check
+  ----------------------------------- -----------------------------------
+  `404` for `/api/v1/...`             The backend may register a
+                                      different prefix or no matching
+                                      router. Inspect `app.routes` and
+                                      `/docs`.
 
-## Testing and safety limitations
+  `404` for `/`                       The root page route may be missing,
+                                      or Uvicorn may be serving a
+                                      different FastAPI app.
 
-Run the available test suite from the repository root:
+  `/docs` also returns `404`          Confirm the correct module/app is
+                                      running and that docs have not been
+                                      disabled.
+
+  Robot profile list is empty         Check profile JSON files, profile
+                                      directory, and referenced robot
+                                      assets.
+
+  MuJoCo model fails to load          Check MJCF path, includes,
+                                      mesh/texture references, and
+                                      profile names.
+
+  Planner request fails               Check `NEBIUS_API_KEY`,
+                                      `NEBIUS_MODEL`, base URL, network
+                                      access, and server-side logs.
+
+  Browser UI cannot reach the API     Check the browser's Network panel,
+                                      the actual route table, CORS
+                                      settings, and frontend request
+                                      paths.
+
+  Viewport remains a placeholder      The browser rendering/streaming
+                                      path has not been connected or is
+                                      not receiving frames.
+  -----------------------------------------------------------------------
+
+A `404` is a route-registration or path mismatch, not evidence that the
+MuJoCo physics engine itself has failed.
+
+## Testing
+
+Run the project test suite from the repository root:
 
 ``` bash
 pytest -q
 ```
 
-Unit tests may use fakes for planner/executor behavior. Real MuJoCo
-integration tests require the relevant dependencies and model assets;
-passing unit tests does not prove physical plausibility or successful
-manipulation.
+Unit tests may use fakes for planner and executor behavior. Real MuJoCo
+integration tests require the MuJoCo package and the relevant robot
+assets. Read individual test requirements before interpreting a passing
+unit-test suite as proof of end-to-end simulation behavior.
 
-Other limitations:
+For meaningful evaluation, record the robot profile, environment
+configuration, task setup, policy/checkpoint identifier, number of
+evaluation episodes, success criteria, and measured results. Do not
+report unmeasured performance claims.
 
--   Runtime task state is in memory and resets when the process
+## Current scope and limitations
+
+-   The reference runtime task is profile-configured pick-and-place.
+-   The planner is constrained by application-side schemas and
+    validation; it is not a general-purpose robot controller.
+-   The runtime's supported controller and gripper semantics are limited
+    to compatible configured actuators.
+-   The current browser HTML includes a viewport placeholder; a live
+    rendered browser viewport needs a separate rendering/streaming
+    integration.
+-   Runtime API paths must be verified from the actual running app.
+    Older examples may not match later router changes.
+-   Runtime task state and training job state may be in-memory in the
+    current prototype; state can be lost when the corresponding process
     restarts.
--   A planner response is not a motion plan guarantee.
--   A validated action sequence is not proof of successful grasp or
-    placement.
--   End-to-end Panda pick-and-place remains unverified while trajectory
-    convergence errors persist.
--   Do not connect this prototype to physical hardware without a
-    separate safety review, a hardware-specific controller, collision
-    and workspace validation, and an emergency-stop path.
+-   Training and runtime use separate assets and code paths. Any
+    intentional artifact exchange must be explicit.
+-   RL and world-model checkpoints require measured evaluation. Training
+    completion is not evidence of task success or safe behavior.
+-   Physical-robot deployment, sim-to-real transfer, and cross-robot
+    policy transfer are not implied by a successful MuJoCo
+    demonstration.
+
+## Safety
+
+This repository is a simulation-first research prototype. **Do not
+connect it to physical hardware or use it to command a real robot
+without a separate engineering and safety review.**
+
+A real deployment would require, at minimum:
+
+-   A hardware-specific controller and validated command interface.
+-   Independent safety-rated limits and workspace constraints.
+-   A physical emergency-stop path.
+-   Collision, payload, speed, and force limits appropriate to the
+    hardware.
+-   Fault handling, operator supervision, and controlled recovery.
+-   Validation of the complete system under the applicable safety
+    standards and operating procedures.
+
+Simulation checks and application-level validation are not substitutes
+for hardware safety systems.
+
+## Research direction
+
+The project is intended as a foundation for investigating:
+
+-   Language-conditioned task planning with constrained execution.
+-   Simulator-grounded action verification and bounded recovery.
+-   Robot-profile-driven manipulation environments.
+-   Synthetic experience collection using scripted/teacher policies.
+-   RL policy training and reproducible evaluation.
+-   World-model learning and its downstream use by RL.
+-   Future sim-to-real evaluation, only after the simulation and
+    hardware interfaces have been independently validated.
+
+The central architectural principle is to keep **language planning,
+low-level control, simulation verification, and policy training as
+distinct responsibilities**.
