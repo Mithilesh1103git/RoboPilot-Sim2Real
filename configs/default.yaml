@@ -10,6 +10,6 @@ planner:
   temperature: 0.1
   timeout_seconds: 45
 safety:
-  max_recovery_retries: 1
+  max_task_retries: 2
   supported_object: red_block
   supported_destination: blue_tray

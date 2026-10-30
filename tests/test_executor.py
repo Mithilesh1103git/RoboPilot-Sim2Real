@@ -28,7 +28,7 @@ def test_executor_calls_planner_before_controller(monkeypatch):
     monkeypatch.setattr(module, "pick_and_place", fake_pick_and_place)
     env = FakeEnvironment()
     planner = FakePlanner()
-    result = TaskExecutor(env, planner, max_retries=0).run(
+    result = TaskExecutor(env, planner, max_step_retries=0).run(
         "Pick the red block and place it in the blue tray"
     )
     assert planner.calls == 1 and called["goal"] == ("red_block", "blue_tray")
