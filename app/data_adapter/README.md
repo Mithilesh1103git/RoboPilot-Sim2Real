@@ -44,7 +44,7 @@ Example ingest body:
 
 ## Storage
 
-Raw input: `data/adapter/raw/<dataset_id>.json`.
-Standardized: `data/adapter/standardized/<dataset_id>/manifest.json` and `episodes.jsonl`.
+Raw input: `../../training/data`.
+Standardized: `../../training/data` and `episodes.jsonl`.
 
 Data may contain images or arrays too large for JSON; this baseline expects JSON-serializable records. Keep image/video assets in object storage and refer to them by URI in observation metadata. Do not treat missing success labels as success.
