@@ -7,7 +7,7 @@ import threading
 import time
 from pathlib import Path
 
-from app.config import settings
+from app.settings import settings
 from app.robots.registry import load_robot_profile
 
 

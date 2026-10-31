@@ -1,0 +1,75 @@
+{
+  "id": "panda",
+  "display_name": "Franka Panda (Base)",
+  "asset_directory": "franka_panda",
+  "mjcf_file": "panda.xml",
+  "arm_joint_names": [
+    "joint1",
+    "joint2",
+    "joint3",
+    "joint4",
+    "joint5",
+    "joint6",
+    "joint7"
+  ],
+  "home_positions": [
+    0.0,
+    -0.45,
+    0.0,
+    -2.2,
+    0.0,
+    1.8,
+    0.8
+  ],
+  "end_effector_body": "hand",
+  "gripper_actuators": [
+    "actuator8"
+  ],
+  "gripper_open_control": [
+    255.0
+  ],
+  "gripper_closed_control": [
+    0.0
+  ],
+  "gripper_joint_positions": {
+    "finger_joint1": 0.04,
+    "finger_joint2": 0.04
+  },
+  "task": {
+    "object_name": "red_block",
+    "destination_name": "blue_tray",
+    "object_start": [
+      0.48,
+      -0.2,
+      0.425
+    ],
+    "destination_start": [
+      0.57,
+      0.22,
+      0.405
+    ],
+    "table_position": [
+      0.48,
+      0,
+      0.38
+    ],
+    "object_half_size": [
+      0.022,
+      0.022,
+      0.025
+    ],
+    "tray_half_size": [
+      0.13,
+      0.13,
+      0.005
+    ],
+    "lift_min_height": 0.025,
+    "placement_tolerance": [
+      0.105,
+      0.105,
+      0.085
+    ]
+  },
+  "notes": "Reference Panda profile. Custom robots need a compatible MJCF model and correct joint/body/actuator mappings.",
+  "control_mode": "position"
+}

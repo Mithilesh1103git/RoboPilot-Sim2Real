@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 from app.agent.executor import TaskExecutor
-from app.config import settings
+from app.settings import settings
 from app.planner.nemotron import NemotronPlanner
 from app.simulation.environment import SimulationEnvironment
 

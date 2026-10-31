@@ -11,7 +11,7 @@ from app.api.datasets import router as datasets_router
 from app.api.robots import router as robots_router
 from app.api.tasks import router as tasks_router
 from app.api.telemetry import router as telemetry_router
-from app.config import settings
+from app.settings import settings
 from app.schemas import HealthStatus
 
 print(f"Nebius token factory base url: {settings.nebius_base_url}")

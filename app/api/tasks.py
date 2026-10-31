@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from app.agent.executor import TaskExecutor
-from app.config import settings
+from app.settings import settings
 from app.planner.nemotron import NemotronPlanner
 from app.robots.registry import load_robot_profile
 from app.schemas import TaskRequest, TaskStatus

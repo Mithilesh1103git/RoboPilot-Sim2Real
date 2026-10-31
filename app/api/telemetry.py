@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.tasks import _lock, _tasks
-from app.config import settings
+from app.settings import settings
 
 router = APIRouter(tags=["telemetry"])
 

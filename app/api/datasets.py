@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
-from app.config import settings
+from app.settings import settings
 from app.data_adapter import DatasetAdapter, DatasetValidationError
 from app.data_adapter.models import IngestRequest, IngestResponse
 

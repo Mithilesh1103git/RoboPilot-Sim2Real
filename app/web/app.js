@@ -200,14 +200,11 @@ byId('runTask')?.addEventListener(
         body: JSON.stringify({
           instruction,
           scenario:
-            byId('scenario')?.value ||
-            'pick_and_place',
+            byId('scenario')?.value || 'pick_and_place',
           robot_name:
-            byId('robotName')?.value ||
-            'panda',
+            byId('robotName')?.value || 'panda',
           viewer_enabled:
-            byId('viewer_enabled')?.value ||
-            'false',
+            byId('viewerEnabled')?.value || 'false',
         }),
       });
 

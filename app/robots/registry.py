@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.config import PROJECT_ROOT
+from app.settings import PROJECT_ROOT
 
-PROFILE_DIR = PROJECT_ROOT / "configs" / "robots"
+PROFILE_DIR = PROJECT_ROOT / "app" / "configs" / "robots"
 
 
 def available_robots():
@@ -71,6 +71,6 @@ def _load(name):
 
 
 def load_robot_profile(name=None):
-    from app.config import settings
+    from app.settings import settings
 
     return _load((name or settings.robot_name).lower())

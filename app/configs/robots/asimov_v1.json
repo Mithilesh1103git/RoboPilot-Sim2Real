@@ -1,7 +1,8 @@
 {
-  "id": "panda",
-  "display_name": "Franka Emika Panda",
-  "asset_directory": "franka_emika_panda",
+  "id": "asimov_v1",
+  "display_name": "Asimov V1",
+  "control_mode": "position",
+  "asset_directory": "asimov_v1",
   "mjcf_file": "panda.xml",
   "arm_joint_names": [
     "joint1",
@@ -50,7 +51,7 @@
     ],
     "table_position": [
       0.48,
-      0,
+      0.0,
       0.38
     ],
     "object_half_size": [
@@ -70,6 +71,5 @@
       0.085
     ]
   },
-  "notes": "Reference Panda profile. Custom robots need a compatible MJCF model and correct joint/body/actuator mappings.",
-  "control_mode": "position"
+  "notes": "Robot-only Panda MJCF; the runtime generates the task scene."
 }

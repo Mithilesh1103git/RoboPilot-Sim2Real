@@ -1,10 +1,10 @@
 # Robot profiles
 
-Add one JSON file per robot under `configs/robots/`. The file name (without `.json`) is the `ROBOT_NAME`.
+Add one JSON file per robot under ``. The file name (without `.json`) is the `ROBOT_NAME`.
 
 Required fields:
 - `id`, `display_name`
-- `asset_directory`: directory name under the runtime `assets/robots/` and training `training/assets/robots/` roots
+- `asset_directory`: directory name under the runtime `../../../assets/robots` and training `training/assets/robots/` roots
 - `mjcf_file`: MuJoCo MJCF model file in that directory
 - `arm_joint_names`: ordered actuated arm joints (any count)
 - `home_positions`: one safe initial joint position per arm joint

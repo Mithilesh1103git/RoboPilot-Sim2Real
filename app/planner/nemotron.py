@@ -3,7 +3,7 @@
 import logging
 import time
 
-from app.config import settings
+from app.settings import settings
 from app.planner.context.manager import PlannerContextManager
 from app.planner.prompts import build_planner_messages
 from app.planner.validation import parse_plan

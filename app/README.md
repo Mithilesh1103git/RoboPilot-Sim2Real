@@ -484,8 +484,8 @@ training/assets/robots/
 
 ### Adding a compatible robot
 
-1.  Copy `configs/robots/custom_robot.template.json` to
-    `configs/robots/<robot_id>.json`.
+1. Copy `configs` to
+    `configs`.
 2.  Configure the robot's MJCF filename and asset directory.
 3.  Define ordered scalar arm joints and safe home positions.
 4.  Define the end-effector body.
