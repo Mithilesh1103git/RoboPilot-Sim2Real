@@ -1,7 +1,7 @@
 # Custom robot support — implementation audit
 
 ## Implemented
-- Robot profiles are JSON files in `configs/robots/`; `panda.json` is the reference profile and `custom_robot.template.json` is a copy-and-edit template.
+- Robot profiles are JSON files in `app/configs`; `panda.json` is the reference profile and `custom_robot.template.json` is a copy-and-edit template.
 - Runtime and training each have their own profile reader (`app/robots/registry.py`, `training/robots/registry.py`). Training imports no runtime Python code.
 - Runtime `/robots` and training `/api/robots` list available profiles. Both web UIs populate a robot selector from those endpoints.
 - Runtime task requests accept `robot_name`; planner prompts and plan validation use profile-configured object/destination names.
@@ -12,7 +12,7 @@
 - Added profile validation utility and documentation for model asset placement.
 
 ## Requirements for adding a robot
-1. Create `configs/robots/<robot_id>.json` from the template and set `id` to match the filename stem.
+1. Create `app/configs` from the template and set `id` to match the filename stem.
 2. Put its MJCF and referenced assets in `assets/robots/<asset_directory>/`.
 3. Copy the same model/assets to `training/assets/robots/<asset_directory>/` for the independent training application.
 4. Configure ordered scalar arm joint names, home positions, end-effector body, direct joint actuators, gripper actuators/open/closed values, gripper joint positions, and task geometry.

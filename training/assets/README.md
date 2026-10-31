@@ -9,4 +9,4 @@ The starter project intentionally does not bundle a robot model or scene XML. A 
 - a target tray with collision geometry,
 - a camera named `overview` (or update the camera observation code).
 
-Update `configs/default.yaml` with the actual scene path.
+Update `../../app/configs` with the actual scene path.
